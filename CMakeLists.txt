@@ -26,7 +26,7 @@ include_directories(
 )
 
 ## Declare a cpp executable
-add_executable(dehazer_node src/dehazer_node.cpp)
+add_executable(dehazer_node src/dehazer_node.cpp src/dehazer.cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(dehazer_node
