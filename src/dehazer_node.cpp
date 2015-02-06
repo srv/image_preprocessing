@@ -9,7 +9,7 @@
 
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "dehazing");
+  ros::init(argc, argv, "dehazer");
 
   ros::NodeHandle nh;
   ros::NodeHandle nhp("~");
