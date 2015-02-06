@@ -61,70 +61,8 @@ cv::Mat Dehazer::dehaze(cv::Mat img) {
 }
 
 cv::Mat Dehazer::boxFilter(cv::Mat img, int local_window_radius) {
-  int r = local_window_radius;
-  // [hei, wid] = size(img);
-  // filt_img = zeros(size(img));
-  cv::Mat filt_img = cv::Mat::zeros(img.size(), CV_32FC1);
-
-  // %cumulative sum over Y axis
-  // imCum = cumsum(img, 1);
-  cv::Mat cum;
-  cv::reduce(img, cum, 0, CV_REDUCE_SUM);
-  // %difference over Y axis
-  // filt_img(1:r+1, :) = imCum(1+r:2*r+1, :);
-  for (size_t i = 0; i < r; i++) {
-    for (size_t j = 0; j < cum.cols; j++) {
-      filt_img.at<float>(i, j) = cum.at<float>(r+i, j);
-    }
-  }
-
-  // filt_img(r+2:hei-r, :) = imCum(2*r+2:hei, :) - imCum(1:hei-2*r-1, :);
-  for (size_t i = 0; i < img.rows - 2*r - 1; i++) {
-    for (size_t j = 0; j < cum.cols; j++) {
-      filt_img.at<float>(i + r + 1, j) = cum.at<float>(i+2*r+1, j)
-                                       - cum.at<float>(i, j);
-    }
-  }
-
-  // filt_img(hei-r+1:hei, :) = repmat(imCum(hei, :), [r, 1])
-  //                            - imCum(hei-2*r:hei-r-1, :);
-  for (size_t i = 0; i < r; i++) {
-    for (size_t j = 0; j < cum.cols; j++) {
-      filt_img.at<float>(img.rows-r+i, j) = cum.at<float>(img.rows - 1, j)
-        - cum.at<float>(img.rows - 2*r - 1 + i, j);
-    }
-  }
-
-
-  // %cumulative sum over X axis
-  // imCum = cumsum(filt_img, 2);
-  cv::reduce(filt_img, cum, 1, CV_REDUCE_SUM);
-
-  // %difference over Y axis
-  // filt_img(:, 1:r+1) = imCum(:, 1+r:2*r+1);
-  for (size_t i = 0; i < cum.rows; i++) {
-    for (size_t j = 0; j < r; j++) {
-      filt_img.at<float>(i, j) = cum.at<float>(i, r+j);
-    }
-  }
-
-  // filt_img(:, r+2:wid-r) = imCum(:, 2*r+2:wid) - imCum(:, 1:wid-2*r-1);
-  for (size_t i = 0; i < img.rows; i++) {
-    for (size_t j = 0; j < img.cols - 2*r - 1; j++) {
-      filt_img.at<float>(i, j + r + 1) = cum.at<float>(i, j+2*r+1)
-                                       - cum.at<float>(i, j);
-    }
-  }
-
-  // filt_img(:, wid-r+1:wid) = repmat(imCum(:, wid), [1, r])
-  //                            - imCum(:, wid-2*r:wid-r-1);
-  for (size_t i = 0; i < img.rows; i++) {
-    for (size_t j = 0; j < r; j++) {
-      filt_img.at<float>(i, img.cols - j) = cum.at<float>(i, img.cols - 1)
-        - cum.at<float>(i, img.cols - 2*r - 1 + j);
-    }
-  }
-
+  cv::Mat filt_img;
+  cv::boxFilter(img, filt_img, CV_32F, cv::Size(2*local_window_radius+1, 2*local_window_radius+1));
   return filt_img;
 }
 
