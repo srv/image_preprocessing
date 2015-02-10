@@ -16,17 +16,18 @@ StereoDehazer::StereoDehazer(ros::NodeHandle nh, ros::NodeHandle nhp): nh_(nh), 
 
   // Topic parameters
   string odom_topic, left_topic, right_topic, left_info_topic, right_info_topic, cloud_topic;
-  nhp_.param("left_topic",       left_topic,       string("/stereo_down/left/image_color"));
-  nhp_.param("right_topic",      right_topic,      string("/stereo_down/right/image_color"));
-  nhp_.param("left_info_topic",  left_info_topic,  string("/stereo_down/left/camera_info"));
-  nhp_.param("right_info_topic", right_info_topic, string("/stereo_down/right/camera_info"));
+  std::string stereo_ns = nh_.resolveName("stereo");
+  nhp_.param("left_topic",       left_topic,       string("/left/image_color"));
+  nhp_.param("right_topic",      right_topic,      string("/right/image_color"));
+  nhp_.param("left_info_topic",  left_info_topic,  string("/left/camera_info"));
+  nhp_.param("right_info_topic", right_info_topic, string("/right/camera_info"));
 
   // Topics subscriptions
   image_transport::ImageTransport it(nh_);
-  left_sub_       .subscribe(it,  left_topic,       3);
-  right_sub_      .subscribe(it,  right_topic,      3);
-  left_info_sub_  .subscribe(nh_, left_info_topic,  3);
-  right_info_sub_ .subscribe(nh_, right_info_topic, 3);
+  left_sub_       .subscribe(it,  ros::names::clean(stereo_ns + left_topic),       3);
+  right_sub_      .subscribe(it,  ros::names::clean(stereo_ns + right_topic),      3);
+  left_info_sub_  .subscribe(nh_, ros::names::clean(stereo_ns + left_info_topic),  3);
+  right_info_sub_ .subscribe(nh_, ros::names::clean(stereo_ns + right_info_topic), 3);
 
   // Create the callback with the clouds
   sync_stereo_.reset(new SyncStereo(StereoSyncPolicy(4),
@@ -39,10 +40,10 @@ StereoDehazer::StereoDehazer(ros::NodeHandle nh, ros::NodeHandle nhp): nh_(nh), 
       this, _1, _2, _3, _4));
 
   // Set the image publishers before the streaming
-  left_color_pub_  = it.advertiseCamera("/stereo_down/enhanced/left/image_color",  1);
-  right_color_pub_ = it.advertiseCamera("/stereo_down/enhanced/right/image_color", 1);
-  left_mono_pub_   = it.advertiseCamera("/stereo_down/enhanced/left/image_mono",  1);
-  right_mono_pub_  = it.advertiseCamera("/stereo_down/enhanced/right/image_mono", 1);
+  left_color_pub_  = it.advertiseCamera(ros::names::clean(stereo_ns + "/enhanced/left/image_color"),  1);
+  right_color_pub_ = it.advertiseCamera(ros::names::clean(stereo_ns + "/enhanced/right/image_color"), 1);
+  left_mono_pub_   = it.advertiseCamera(ros::names::clean(stereo_ns + "/enhanced/left/image_mono"),  1);
+  right_mono_pub_  = it.advertiseCamera(ros::names::clean(stereo_ns + "/enhanced/right/image_mono"), 1);
   ROS_INFO("Stereo Image Enhacer Initialized!");
 }
 
@@ -71,7 +72,6 @@ void StereoDehazer::callback(const ImageConstPtr& l_img_msg,
   Dehazer d;
 
   if (left_color_pub_.getNumSubscribers() > 0) {
-    ROS_INFO("Stereo Image Enhacer dehazed_left!");
     Mat dehazed_left  = d.dehaze(l_img);
     // convert OpenCV image to ROS message
     cv_bridge::CvImage left_cvi;
@@ -85,7 +85,6 @@ void StereoDehazer::callback(const ImageConstPtr& l_img_msg,
   }
 
   if (right_color_pub_.getNumSubscribers() > 0) {
-    ROS_INFO("Stereo Image Enhacer dehazed_right!");
     Mat dehazed_right = d.dehaze(r_img);
     // convert OpenCV image to ROS message
     cv_bridge::CvImage right_cvi;
@@ -99,7 +98,6 @@ void StereoDehazer::callback(const ImageConstPtr& l_img_msg,
   }
 
   if (left_mono_pub_.getNumSubscribers() > 0) {
-    ROS_INFO("Stereo Image Enhacer deh_mono_left!");
     Mat l_img_mono;
     cvtColor(l_img, l_img_mono, CV_BGR2GRAY);
     Mat deh_mono_left  = d.dehazeMono(l_img_mono);
@@ -115,7 +113,6 @@ void StereoDehazer::callback(const ImageConstPtr& l_img_msg,
   }
 
   if (right_mono_pub_.getNumSubscribers() > 0) {
-    ROS_INFO("Stereo Image Enhacer deh_mono_right!");
     Mat r_img_mono;
     cvtColor(r_img, r_img_mono, CV_BGR2GRAY);
     Mat deh_mono_right  = d.dehazeMono(r_img_mono);
@@ -129,6 +126,4 @@ void StereoDehazer::callback(const ImageConstPtr& l_img_msg,
     mono_right_cvi.toImageMsg(mono_right_im);
     right_mono_pub_.publish(mono_right_im, *r_info_msg);
   }
-
-
 }
