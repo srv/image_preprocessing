@@ -32,7 +32,7 @@ class StereoDehazer {
                                                        right_info_sub_;
 
   // Topic sync properties (with pointcloud)
-  typedef message_filters::sync_policies::ExactTime<sensor_msgs::Image,
+  typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image,
                                                     sensor_msgs::Image,
                                                     sensor_msgs::CameraInfo,
                                                     sensor_msgs::CameraInfo>

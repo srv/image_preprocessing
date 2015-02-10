@@ -34,6 +34,21 @@ Mat Dehazer::dehaze(Mat img) {
   return deh;
 }
 
+Mat Dehazer::dehazeMono(Mat img) {
+  int local_window_radius = 16;
+  double eps = 0.01;
+
+  Mat img_float;
+  img.convertTo(img_float, CV_32F, 1/255.0);
+
+  Mat filt = guidedFilter(img_float, img_float, local_window_radius, eps);
+
+  Mat deh;
+  Mat result = (img_float - filt) * 5 + filt;
+  result.convertTo(deh, CV_8U, 255.0);
+  return deh;
+}
+
 Mat Dehazer::guidedFilter(Mat img,  // p
                               Mat guidance_img,  // I
                               int local_window_radius,  // r
