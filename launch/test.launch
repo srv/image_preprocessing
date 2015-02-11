@@ -1,0 +1,64 @@
+<launch>
+
+  <param name="use_sim_time" value="true"/>
+
+  <arg name="stereo" value="/stereo_down/enhanced"/>
+  <arg name="bagfile" value="/media/miquel/old_home/data/soller/Soller-2012-10-survey-1.7m_2012-10-02-11-19-34_0.bag
+/media/miquel/old_home/data/soller/Soller-2012-10-survey-1.7m_2012-10-02-11-20-30_1.bag
+/media/miquel/old_home/data/soller/Soller-2012-10-survey-1.7m_2012-10-02-11-21-36_2.bag
+/media/miquel/old_home/data/soller/Soller-2012-10-survey-1.7m_2012-10-02-11-22-42_3.bag
+/media/miquel/old_home/data/soller/Soller-2012-10-survey-1.7m_2012-10-02-11-23-48_4.bag
+/media/miquel/old_home/data/soller/Soller-2012-10-survey-1.7m_2012-10-02-11-24-54_5.bag
+/media/miquel/old_home/data/soller/Soller-2012-10-survey-1.7m_2012-10-02-11-26-00_6.bag
+/media/miquel/old_home/data/soller/Soller-2012-10-survey-1.7m_2012-10-02-11-27-06_7.bag
+/media/miquel/old_home/data/soller/Soller-2012-10-survey-1.7m_2012-10-02-11-28-12_8.bag
+/media/miquel/old_home/data/soller/Soller-2012-10-survey-1.7m_2012-10-02-11-29-18_9.bag
+/media/miquel/old_home/data/soller/Soller-2012-10-survey-1.7m_2012-10-02-11-30-24_10.bag
+/media/miquel/old_home/data/soller/Soller-2012-10-survey-1.7m_2012-10-02-11-31-30_11.bag
+/media/miquel/old_home/data/soller/Soller-2012-10-survey-1.7m_2012-10-02-11-32-36_12.bag"/>
+
+  <node pkg="rosbag" type="play" name="player" args="--clock -l -r 0.1 $(arg bagfile)" output="screen"/>
+
+  <node pkg="tf" type="static_transform_publisher" name="g500_to_camera" args="0.5 -0.06 0.098 1.5708 0.0 0.0 /girona500 /stereo_down 100" />
+
+  <include file="$(find turbot_configurations)/launch/modules/stereo_pipeline.launch" >
+    <arg name="stereo" value="stereo_down" />
+  </include>
+
+  <!-- <node pkg="viso2_ros" type="stereo_odometer" name="stereo_odometer" output="screen">
+    <remap from="stereo" to="/stereo_down/enhanced"/>
+    <remap from="image" to="image_rect"/>
+    <param name="base_link_frame_id" value="/stereo_down"/>
+  </node> -->
+
+  <!-- SLAM -->
+  <node pkg="stereo_slam" type="localization" name="slam" output="screen">
+    <param name="enable" value="true" />
+
+    <param name="work_dir" value="/tmp" />
+
+    <param name="odom_topic" value="/navigation_g500/odometry_ekf" />
+    <param name="left_topic" value="$(arg stereo)/left/image_rect_color" />
+    <param name="right_topic" value="$(arg stereo)/right/image_rect_color" />
+    <param name="left_info_topic" value="$(arg stereo)/left/camera_info" />
+    <param name="right_info_topic" value="$(arg stereo)/right/camera_info" />
+    <param name="cloud_topic" value="$(arg stereo)/points2" />
+
+    <param name="min_displacement" value="0.40" />
+    <param name="save_clouds" value="true" />
+    <param name="desc_type" value="SIFT" />
+    <param name="desc_matching_type" value="CROSSCHECK" />
+    <param name="min_neighbor" value="10" />
+
+    <param name="desc_thresh_ratio" value="0.8" />
+    <param name="n_candidates" value="4" />
+    <param name="min_matches" value="100" />
+    <param name="min_inliers" value="70" />
+
+    <param name="g2o_algorithm" value="0" />
+    <param name="g2o_opt_max_iter" value="20" />
+  </node>
+
+  <!-- Pointcloud collector -->
+  <!-- <node pkg="stereo_slam" type="reconstruction" name="reconstruction" args="/tmp" output="screen"/> -->
+</launch>
