@@ -22,14 +22,14 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
   {
     Mat img = cv_bridge::toCvShare(msg, "bgr8")->image;
     Mat imgd;
-    img.convertTo(imgd, CV_64F, 1.0/255.0);
+    img.convertTo(imgd, CV_64FC3);
     if (first)
     {
       ROS_INFO("Images received correctly.");
       first = false;
       vig = Mat::zeros(img.size(), CV_64FC3);
     }
-    vig = vig + img;
+    vig = vig + imgd;
     image_counter++;
   }
   catch (cv_bridge::Exception& e)
@@ -74,6 +74,6 @@ int main(int argc, char **argv)
   sigaction(SIGINT, &sigIntHandler, NULL);
 
   image_transport::ImageTransport it(nh);
-  image_transport::Subscriber sub = it.subscribe("camera/image", 1, imageCallback);
+  image_transport::Subscriber sub = it.subscribe("image", 1, imageCallback);
   ros::spin();
 }

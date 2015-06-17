@@ -1,32 +1,31 @@
 <launch>
-  <arg name="bagfiles" default="2015-06-08-20-45-49_0.bag
-                                2015-06-08-20-47-17_1.bag
-                                2015-06-08-20-48-44_2.bag
-                                2015-06-08-20-50-12_3.bag
-                                2015-06-08-20-51-39_4.bag
-                                2015-06-08-20-53-07_5.bag
-                                2015-06-08-20-54-35_6.bag
-                                2015-06-08-20-56-02_7.bag
-                                2015-06-08-20-57-30_8.bag
-                                2015-06-08-20-58-58_9.bag
-                                2015-06-08-21-00-25_10.bag
-                                2015-06-08-21-01-53_11.bag
-                                2015-06-08-21-03-21_12.bag"/>
+  <arg name="bagfiles" default="/data/HD3/2015_06_08_valldemossa/2015-06-08-20-45-49_0.bag
+    /data/HD3/2015_06_08_valldemossa/2015-06-08-20-47-17_1.bag
+    /data/HD3/2015_06_08_valldemossa/2015-06-08-20-48-44_2.bag
+    /data/HD3/2015_06_08_valldemossa/2015-06-08-20-50-12_3.bag
+    /data/HD3/2015_06_08_valldemossa/2015-06-08-20-51-39_4.bag
+    /data/HD3/2015_06_08_valldemossa/2015-06-08-20-53-07_5.bag
+    /data/HD3/2015_06_08_valldemossa/2015-06-08-20-54-35_6.bag
+    /data/HD3/2015_06_08_valldemossa/2015-06-08-20-56-02_7.bag
+    /data/HD3/2015_06_08_valldemossa/2015-06-08-20-57-30_8.bag
+    /data/HD3/2015_06_08_valldemossa/2015-06-08-20-58-58_9.bag
+    /data/HD3/2015_06_08_valldemossa/2015-06-08-21-00-25_10.bag
+    /data/HD3/2015_06_08_valldemossa/2015-06-08-21-01-53_11.bag
+    /data/HD3/2015_06_08_valldemossa/2015-06-08-21-03-21_12.bag"/>
 
-  <arg name="camera" default="stereo/left"/>
+  <arg name="camera" default="stereo_down/left"/>
   <arg name="image" default="image_rect_color"/>
 
 
   <param name="use_sim_time" value="true"/>
 
-  <node pkg="rosbag" type="play" name="player" args="--clock -d 5 $(arg bagfiles)" />
+  <node pkg="rosbag" type="play" name="player" args="--clock -d 5 $(arg bagfiles)" output="screen" />
 
   <group ns="$(arg camera)">
     <node pkg="image_proc" type="image_proc" name="image_proc" output="screen"/>
   </group>
 
-  <node pkg="image_preprocessing" type="vignetting_extractor" name="vignetting_extractor">
-    <remap from="camera" to="$(arg camera)"/>
-    <remap from="image" to="$(arg image)"/>
+  <node pkg="image_preprocessing" type="vignetting_extractor" name="vignetting_extractor" output="screen">
+    <remap from="image" to="$(arg camera)/$(arg image)"/>
   </node>
 </launch>
