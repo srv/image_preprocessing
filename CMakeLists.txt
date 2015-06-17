@@ -14,7 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(OpenCV REQUIRED)
 
-find_package(Boost REQUIRED COMPONENTS Thread)
+find_package(Boost REQUIRED COMPONENTS thread)
 
 find_package(OpenMP)
 if (OPENMP_FOUND)
@@ -39,8 +39,13 @@ include_directories(
 ## Declare a cpp executable
 add_executable(dehazer_node src/dehazer_node.cpp src/mono_dehazer.cpp src/dehazer.cpp)
 add_executable(stereo_dehazer_node src/stereo_dehazer_node.cpp src/stereo_dehazer.cpp src/dehazer.cpp)
+add_executable(vignetting_extractor src/vignetting_extractor.cpp)
 
 ## Specify libraries to link a library or executable target against
+target_link_libraries(vignetting_extractor
+  ${catkin_LIBRARIES}
+)
+
 target_link_libraries(dehazer_node
   ${catkin_LIBRARIES}
 )
@@ -54,7 +59,7 @@ target_link_libraries(stereo_dehazer_node
 ## Install ##
 #############
 ## Mark executables and/or libraries for installation
-install(TARGETS dehazer_node stereo_dehazer_node
+install(TARGETS dehazer_node stereo_dehazer_node vignetting_extractor
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -66,3 +71,8 @@ install(DIRECTORY include/${PROJECT_NAME}/
   FILES_MATCHING PATTERN "*.h"
   PATTERN ".svn" EXCLUDE
 )
+
+# Finding headers and launch files for QtCreator
+file(GLOB_RECURSE HDRS ${CMAKE_CURRENT_SOURCE_DIR} *.h *.hpp)
+file(GLOB_RECURSE SRCS ${CMAKE_CURRENT_SOURCE_DIR} *.cxx *.cpp *.c *.py)
+file(GLOB_RECURSE LNCH ${CMAKE_CURRENT_SOURCE_DIR} *.launch)
