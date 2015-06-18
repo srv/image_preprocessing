@@ -94,7 +94,7 @@ class VignettingRemover {
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "vignetting_extractor");
+  ros::init(argc, argv, "vignetting_remover");
   ros::NodeHandle nh;
   ros::NodeHandle nhp("~");
 
