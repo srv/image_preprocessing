@@ -1,3 +1,8 @@
+/// Copyright 2015 Miquel Massot Campos
+/// Systems, Robotics and Vision
+/// University of the Balearic Islands
+/// All rights reserved.
+
 #include <ros/ros.h>
 #include <image_transport/image_transport.h>
 #include <opencv2/highgui/highgui.hpp>

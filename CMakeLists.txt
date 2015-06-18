@@ -37,12 +37,17 @@ include_directories(
 )
 
 ## Declare a cpp executable
-add_executable(dehazer_node src/dehazer_node.cpp src/mono_dehazer.cpp src/dehazer.cpp)
-add_executable(stereo_dehazer_node src/stereo_dehazer_node.cpp src/stereo_dehazer.cpp src/dehazer.cpp)
-add_executable(vignetting_extractor src/vignetting_extractor.cpp)
+add_executable(dehazer_node src/nodes/dehazer_node.cpp src/mono_dehazer.cpp src/dehazer.cpp)
+add_executable(stereo_dehazer_node src/nodes/stereo_dehazer_node.cpp src/stereo_dehazer.cpp src/dehazer.cpp)
+add_executable(vignetting_extractor src/nodes/vignetting_extractor_node.cpp)
+add_executable(vignetting_remover src/nodes/vignetting_remover_node.cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(vignetting_extractor
+  ${catkin_LIBRARIES}
+)
+
+target_link_libraries(vignetting_remover
   ${catkin_LIBRARIES}
 )
 
@@ -59,7 +64,7 @@ target_link_libraries(stereo_dehazer_node
 ## Install ##
 #############
 ## Mark executables and/or libraries for installation
-install(TARGETS dehazer_node stereo_dehazer_node vignetting_extractor
+install(TARGETS dehazer_node stereo_dehazer_node vignetting_extractor vignetting_remover
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
