@@ -14,7 +14,7 @@
     /data/HD3/2015_06_08_valldemossa/2015-06-08-21-03-21_12.bag"/>
 
   <arg name="camera" default="stereo_down/left"/>
-  <arg name="image" default="image_rect_color"/>
+  <arg name="image" default="image_raw"/>
 
 
   <param name="use_sim_time" value="true"/>

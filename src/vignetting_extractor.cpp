@@ -10,7 +10,8 @@
 using namespace std;
 using namespace cv;
 
-Mat vig;
+Mat acc_x;
+Mat acc_xx;
 bool first = true;
 double image_counter = 0.0;
 // Stop handler binding
@@ -27,9 +28,12 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
     {
       ROS_INFO("Images received correctly.");
       first = false;
-      vig = Mat::zeros(img.size(), CV_64FC3);
+      acc_x = Mat::zeros(img.size(), CV_64FC3);
+      acc_xx = Mat::zeros(img.size(), CV_64FC3);
     }
-    vig = vig + imgd;
+    acc_x = acc_x + imgd;
+    multiply(imgd, imgd, imgd);
+    acc_xx = acc_xx + imgd;
     image_counter++;
   }
   catch (cv_bridge::Exception& e)
@@ -52,8 +56,11 @@ void finalize(int s)
   ROS_INFO("Finalizing...");
   if (image_counter > 0)
   {
-    vig = vig / image_counter;
-    imwrite("vignetting.png", vig);
+    acc_x = acc_x / image_counter;
+    imwrite("vignetting_mean.png", acc_x);
+    multiply(acc_x, acc_x, acc_x);
+    sqrt(acc_xx / image_counter - acc_x, acc_xx);
+    imwrite("vignetting_std.png", acc_xx);
     ROS_INFO("Image saved!");
   }
   ROS_INFO("Done!");
