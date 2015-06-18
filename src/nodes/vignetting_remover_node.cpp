@@ -6,12 +6,9 @@
 #include <ros/ros.h>
 #include <image_transport/image_transport.h>
 #include <sensor_msgs/image_encodings.h>
-#include <opencv2/highgui/highgui.hpp>
 #include <cv_bridge/cv_bridge.h>
-#include <functional>
-#include <boost/function.hpp>
 
-#include <signal.h>
+#include <opencv2/opencv.hpp>
 
 using namespace std;
 using namespace cv;
@@ -19,13 +16,13 @@ using namespace cv;
 
 class VignettingRemover {
  public:
-  VignettingRemover(ros::NodeHandle nh, ros::NodeHandle nhp): nh_(nh), nhp_(nhp), it_(nh), it2_(nhp) {
-    camera_sub_ = it_.subscribeCamera("image",
-                                      1, // queue size
-                                      &VignettingRemover::imageCallback,
-                                      this); // transport
-    img_pub_ = it2_.advertise("image_vig", 1);
+  VignettingRemover(ros::NodeHandle nh, ros::NodeHandle nhp): nh_(nh), nhp_(nhp), it_(nh) {
+    string image_topic = ros::names::remap("image");
+    ROS_INFO_STREAM("Subscribing to " << image_topic);
 
+    string output_topic("image_vig");
+    nhp.param("output_topic", output_topic, string("image_vig"));
+    img_pub_ = it_.advertise(output_topic, 1);
     // Read the images
     string mean_filename, std_filename;
     nhp.param("mean_filename", mean_filename, string(""));
@@ -45,9 +42,15 @@ class VignettingRemover {
     // Compute gain and offset for posterior correction
     Mat desired_avg = 0.5*Mat::ones(mean_d.size(), CV_64FC1);
     double desired_sigma = 1.0/9;
-    divide(Mat(), std_d, gain_, desired_sigma);
+    divide(Mat::ones(std_d.size(), CV_64FC1), std_d, gain_, desired_sigma);
     offset_ = desired_avg - mean_d;
     ROS_INFO_STREAM("Gain and offset ready!");
+
+
+    img_sub_ = it_.subscribe(image_topic,
+                             1, // queue size
+                             &VignettingRemover::imageCallback,
+                             this); // transport
   }
 
  private:
@@ -57,14 +60,14 @@ class VignettingRemover {
   ros::NodeHandle nh_;
   ros::NodeHandle nhp_;
   image_transport::ImageTransport it_;
-  image_transport::ImageTransport it2_;
-  image_transport::CameraSubscriber camera_sub_;
+  image_transport::Subscriber img_sub_;
   image_transport::Publisher img_pub_;
 
   void imageCallback(
-    const sensor_msgs::ImageConstPtr &image_msg,
-    const sensor_msgs::CameraInfoConstPtr &info_msg) {
+    const sensor_msgs::ImageConstPtr &image_msg) {
     cv_bridge::CvImagePtr cv_image_ptr;
+
+    ROS_INFO("CALLBACK ENTERED");
 
     try {
       cv_image_ptr = cv_bridge::toCvCopy(image_msg,
@@ -85,7 +88,7 @@ class VignettingRemover {
     corrected = corrected + avg_ + offset_;
 
     sensor_msgs::ImagePtr out_msg = cv_bridge::CvImage(image_msg->header,
-                                                       "bgr8",
+                                                       "mono8",
                                                        corrected).toImageMsg();
     img_pub_.publish(out_msg);
   }
@@ -97,6 +100,6 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "vignetting_remover");
   ros::NodeHandle nh;
   ros::NodeHandle nhp("~");
-
+  VignettingRemover(nh, nhp);
   ros::spin();
 }

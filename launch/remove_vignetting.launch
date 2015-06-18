@@ -20,14 +20,18 @@
 
   <node pkg="rosbag" type="play" name="player" args="--clock -d 5 $(arg bagfiles)" output="screen" />
 
-  <group ns="$(arg camera)">
-    <node pkg="image_proc" type="image_proc" name="image_proc" output="screen"/>
-  </group>
+  <!--group ns="$(arg camera)">
+    <node pkg="stereo_image_proc" type="stereo_image_proc" name="stereo_image_proc" output="screen"/>
+  </group-->
 
-  <node ns="$(arg camera)/left" pkg="image_preprocessing" type="vignetting_remover" name="vignetting_remover_l" output="screen">
-    <remap from="image" to="$(arg image)"/>
+  <node pkg="image_preprocessing" type="vignetting_remover" name="vignetting_remover_l" output="screen">
+    <param name="mean_filename" value="$(find image_preprocessing)/data/vignetting_mean_left.png"/>
+    <param name="std_filename" value="$(find image_preprocessing)/data/vignetting_std_left.png"/>
+    <remap from="image" to="$(arg camera)/left/$(arg image)"/>
   </node>
-  <node ns="$(arg camera)/right" pkg="image_preprocessing" type="vignetting_remover" name="vignetting_remover_r" output="screen">
-    <remap from="image" to="$(arg image)"/>
+  <node pkg="image_preprocessing" type="vignetting_remover" name="vignetting_remover_r" output="screen">
+    <param name="mean_filename" value="$(find image_preprocessing)/data/vignetting_mean_right.png"/>
+    <param name="std_filename" value="$(find image_preprocessing)/data/vignetting_std_right.png"/>
+    <remap from="image" to="$(arg camera)/right/$(arg image)"/>
   </node>
 </launch>
