@@ -1,4 +1,6 @@
 <launch>
+  <arg name="bagfiles2" default="/media/miquel/data/bagfiles/soller/2015-06-08-20-45-49_0.bag"/>
+
   <arg name="bagfiles" default="/data/HD3/2015_06_08_valldemossa/2015-06-08-20-45-49_0.bag
     /data/HD3/2015_06_08_valldemossa/2015-06-08-20-47-17_1.bag
     /data/HD3/2015_06_08_valldemossa/2015-06-08-20-48-44_2.bag
@@ -18,20 +20,26 @@
 
   <param name="use_sim_time" value="true"/>
 
-  <node pkg="rosbag" type="play" name="player" args="--clock -d 5 $(arg bagfiles)" output="screen" />
+  <node pkg="rosbag" type="play" name="player" args="--clock -d 5 $(arg bagfiles2)" output="screen" />
 
-  <!--group ns="$(arg camera)">
+  <group ns="$(arg camera)">
     <node pkg="stereo_image_proc" type="stereo_image_proc" name="stereo_image_proc" output="screen"/>
-  </group-->
+  </group>
+
+  <group ns="/vig/$(arg camera)">
+    <node pkg="stereo_image_proc" type="stereo_image_proc" name="stereo_image_proc" output="screen"/>
+  </group>
 
   <node pkg="image_preprocessing" type="vignetting_remover" name="vignetting_remover_l" output="screen">
     <param name="mean_filename" value="$(find image_preprocessing)/data/vignetting_mean_left.png"/>
     <param name="std_filename" value="$(find image_preprocessing)/data/vignetting_std_left.png"/>
+    <param name="output_namespace" value="/vig/$(arg camera)/left"/>
     <remap from="image" to="$(arg camera)/left/$(arg image)"/>
   </node>
   <node pkg="image_preprocessing" type="vignetting_remover" name="vignetting_remover_r" output="screen">
     <param name="mean_filename" value="$(find image_preprocessing)/data/vignetting_mean_right.png"/>
     <param name="std_filename" value="$(find image_preprocessing)/data/vignetting_std_right.png"/>
+    <param name="output_namespace" value="/vig/$(arg camera)/right"/>
     <remap from="image" to="$(arg camera)/right/$(arg image)"/>
   </node>
 </launch>
