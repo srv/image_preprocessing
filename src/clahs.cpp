@@ -149,7 +149,7 @@ void MapHistogram(const Mat& Histogram,
 		    double temp = sqrt(-hconst*log(1-vmax*(double(Sum)/NrofPixels)));
 		    Histogram = min(temp*Max,Max); //limit range to Max
 
-		otherwise, //just do UNIFORM if heq_type has a wacky value
+		default: //just do UNIFORM if heq_type has a wacky value
 		    double Sum = sum(Histogram);
 		    Histogram = min(Min + Sum*Scale,Max); //limit range to Max
 	}    
