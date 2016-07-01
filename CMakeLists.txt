@@ -36,29 +36,45 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-## Declare a cpp executable
-add_executable(dehazer_node src/nodes/dehazer_node.cpp src/mono_dehazer.cpp src/dehazer.cpp)
-add_executable(stereo_dehazer_node src/nodes/stereo_dehazer_node.cpp src/stereo_dehazer.cpp src/dehazer.cpp)
-add_executable(vignetting_extractor src/nodes/vignetting_extractor_node.cpp)
-add_executable(vignetting_remover src/nodes/vignetting_remover_node.cpp)
-
-## Specify libraries to link a library or executable target against
-target_link_libraries(vignetting_extractor
-  ${catkin_LIBRARIES}
-)
-
-target_link_libraries(vignetting_remover
-  ${catkin_LIBRARIES}
-)
-
+## Executables
+add_executable(dehazer_node
+  src/nodes/dehazer_node.cpp
+  src/mono_dehazer.cpp
+  src/dehazer.cpp)
 target_link_libraries(dehazer_node
   ${catkin_LIBRARIES}
 )
 
+add_executable(stereo_dehazer_node
+  src/nodes/stereo_dehazer_node.cpp
+  src/stereo_dehazer.cpp
+  src/dehazer.cpp)
 target_link_libraries(stereo_dehazer_node
   ${catkin_LIBRARIES}
   ${Boost_Thread_LIBRARIES}
 )
+
+add_executable(vignetting_extractor
+  src/nodes/vignetting_extractor_node.cpp)
+target_link_libraries(vignetting_extractor
+  ${catkin_LIBRARIES}
+)
+
+add_executable(vignetting_remover
+  src/nodes/vignetting_remover_node.cpp)
+target_link_libraries(vignetting_remover
+  ${catkin_LIBRARIES}
+)
+
+add_executable(clahs
+  src/nodes/clahs_node.cpp
+  src/mono_clahs.cpp
+  src/clahs.cpp)
+target_link_libraries(clahs
+  ${catkin_LIBRARIES}
+)
+
+
 
 #############
 ## Install ##
