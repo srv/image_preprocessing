@@ -12,8 +12,8 @@
 class Dehazer {
  public:
   Dehazer() {}
-  cv::Mat dehaze(cv::Mat img);
-  cv::Mat dehazeMono(cv::Mat img);
+  cv::Mat dehazeRGB(cv::Mat img);
+  cv::Mat dehazeGrayscale(cv::Mat img);
   cv::Mat guidedFilter(cv::Mat img, cv::Mat guidance_img,
                        int local_window_radius, double eps);
 };

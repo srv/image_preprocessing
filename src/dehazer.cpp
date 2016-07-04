@@ -7,7 +7,7 @@
 
 using namespace cv;
 
-Mat Dehazer::dehaze(Mat img) {
+Mat Dehazer::dehazeRGB(Mat img) {
   int local_window_radius = 16;
   double eps = 0.01;
 
@@ -34,7 +34,7 @@ Mat Dehazer::dehaze(Mat img) {
   return deh;
 }
 
-Mat Dehazer::dehazeMono(Mat img) {
+Mat Dehazer::dehazeGrayscale(Mat img) {
   int local_window_radius = 16;
   double eps = 0.01;
 

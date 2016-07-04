@@ -17,20 +17,19 @@ class Clahs {
   public:
     Clahs();
 
-    Mat compute(Mat Image, int NrY, int NrX);
+    Mat clahsGrayscale(Mat Image, int NrY, int NrX);
+    Mat clahsRGB(Mat Image, int NrY, int NrX);
 
   protected:
     Mat MakeLUT(const int& NrGreyLevels,
-                const int& Min,
-                const int& Max,
                 const int& NrBins);
 
     Mat ClipHistogram(const Mat& Histogram,
                       const int& NrGreyLevels,
-                      const int& ClipLimit);
+                      const double& ClipLimit);
 
     Mat ClipHistogramSimple(const Mat& Histogram,
-                            const int& ClipLimit);
+                            const double& ClipLimit);
 
     Mat MapHistogram(const Mat& Histogram,
                      const int& Min,
@@ -38,7 +37,7 @@ class Clahs {
                      const int& NrGreyLevels,
                      const int& NrofPixels,
                      const int& heq_type,
-                     const int& heq_alpha);
+                     const double& heq_alpha);
 
     Mat Interpolate(const Mat& SubRegion,
                     const Mat& MapLU,

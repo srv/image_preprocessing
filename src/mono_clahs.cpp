@@ -14,7 +14,12 @@ MonoClahs::MonoClahs(ros::NodeHandle nh, ros::NodeHandle nhp): nh_(nh), nhp_(nhp
                                     1, // queue size
                                     &MonoClahs::imageCallback,
                                     this); // transport
-  img_pub_ = it_.advertise("clahs", 1);
+
+  string output_namespace;
+  nhp_.param("output_namespace", output_namespace, string("/clahs"));
+
+  img_pub_ = it_.advertiseCamera(
+    ros::names::clean(output_namespace + "/image_rect_color"),  1);
 }
 
 void MonoClahs::imageCallback(
@@ -30,27 +35,31 @@ void MonoClahs::imageCallback(
     return;
   }
 
-  // Extract RGB
-  Mat img = cv_image_ptr->image;
-  std::vector<Mat> channels(3);
-  split(img, channels);
-  Mat r, g, b;
-  channels[2].convertTo(r,CV_8U);
-  channels[1].convertTo(g,CV_8U);
-  channels[0].convertTo(b,CV_8U);
-
-  // TODO: in separate threads
+  // Compute
   Clahs c;
-  Mat cr = c.compute(r,5,4);
-  Mat cg = c.compute(g,5,4);
-  Mat cb = c.compute(b,5,4);
-
   Mat out;
-  Mat q[] = {cb, cg, cr};
-  merge(q, 3, out);
+  string encoding;
+  Mat img = cv_image_ptr->image;
+  if (img.channels() == 1) {
+    out = c.clahsGrayscale(img,5,4);
+    encoding = "mono8";
+  }
+  else if (img.channels() == 3) {
+    out = c.clahsRGB(img,5,4);
+    encoding = "bgr8";
+  }
+  else {
+    ROS_WARN_STREAM("[PreProcessing]: Invalid number of channels: " << img.channels());
+    return;
+  }
 
-  sensor_msgs::ImagePtr out_msg = cv_bridge::CvImage(image_msg->header,
-                                                     "bgr8",
-                                                     out).toImageMsg();
-  img_pub_.publish(out_msg);
+  // convert OpenCV image to ROS message
+  cv_bridge::CvImage mono_cvi;
+  mono_cvi.header.stamp = image_msg->header.stamp;
+  mono_cvi.header.frame_id = image_msg->header.frame_id;
+  mono_cvi.encoding = encoding;
+  mono_cvi.image = out;
+  sensor_msgs::Image mono_im;
+  mono_cvi.toImageMsg(mono_im);
+  img_pub_.publish(mono_im, *info_msg);
 }

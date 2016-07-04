@@ -130,7 +130,7 @@ void StereoDehazer::callbackMono(const ImageConstPtr& l_img_msg,
   if (left_mono_pub_.getNumSubscribers() > 0) {
     Mat l_img_mono = cv_bridge::toCvShare(l_img_msg,
                                         image_encodings::MONO8)->image;
-    Mat deh_mono_left  = d_.dehazeMono(l_img_mono);
+    Mat deh_mono_left  = d_.dehazeGrayscale(l_img_mono);
     // convert OpenCV image to ROS message
     cv_bridge::CvImage mono_left_cvi;
     mono_left_cvi.header.stamp = l_img_msg->header.stamp;
@@ -144,7 +144,7 @@ void StereoDehazer::callbackMono(const ImageConstPtr& l_img_msg,
   if (right_mono_pub_.getNumSubscribers() > 0) {
     Mat r_img_mono = cv_bridge::toCvShare(r_img_msg,
                                         image_encodings::MONO8)->image;
-    Mat deh_mono_right  = d_.dehazeMono(r_img_mono);
+    Mat deh_mono_right  = d_.dehazeGrayscale(r_img_mono);
     // convert OpenCV image to ROS message
     cv_bridge::CvImage mono_right_cvi;
     mono_right_cvi.header.stamp = r_img_msg->header.stamp;
@@ -221,7 +221,7 @@ PointCloud2Ptr StereoDehazer::getPointcloud(
                                     (cv::Vec3b*)&l_image_msg->data[0],
                                     l_image_msg->step);
     // Process the image
-    cv::Mat color_dehazed  = d_.dehaze(color);
+    cv::Mat color_dehazed  = d_.dehazeRGB(color);
     for (int v = 0; v < mat.rows; ++v) {
       for (int u = 0; u < mat.cols; ++u, offset += STEP) {
         if (isValidPoint(mat(v, u))) {
@@ -238,7 +238,7 @@ PointCloud2Ptr StereoDehazer::getPointcloud(
                                     (cv::Vec3b*)&l_image_msg->data[0],
                                     l_image_msg->step);
     // Process the image
-    const cv::Mat_<cv::Vec3b> color_dehazed(d_.dehaze(color));
+    const cv::Mat_<cv::Vec3b> color_dehazed(d_.dehazeRGB(color));
     for (int v = 0; v < mat.rows; ++v) {
       for (int u = 0; u < mat.cols; ++u, offset += STEP) {
         if (isValidPoint(mat(v, u))) {

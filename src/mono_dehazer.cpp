@@ -15,7 +15,12 @@ MonoDehazer::MonoDehazer(ros::NodeHandle nh, ros::NodeHandle nhp): nh_(nh), nhp_
                                     1, // queue size
                                     &MonoDehazer::imageCallback,
                                     this); // transport
-  img_pub_ = it_.advertise("dehazed", 1);
+
+  string output_namespace;
+  nhp_.param("output_namespace", output_namespace, string("/dehazed"));
+
+  img_pub_ = it_.advertiseCamera(
+    ros::names::clean(output_namespace + "/image_rect_color"),  1);
 }
 
 void MonoDehazer::imageCallback(
@@ -30,11 +35,32 @@ void MonoDehazer::imageCallback(
     ROS_ERROR("cv_bridge exception: %s", e.what());
     return;
   }
-  Mat img = cv_image_ptr->image;
+
+  // Compute
   Dehazer d;
-  Mat dehazed = d.dehaze(img);
-  sensor_msgs::ImagePtr out_msg = cv_bridge::CvImage(image_msg->header,
-                                                     "bgr8",
-                                                     dehazed).toImageMsg();
-  img_pub_.publish(out_msg);
+  Mat out;
+  string encoding;
+  Mat img = cv_image_ptr->image;
+  if (img.channels() == 1) {
+    out = d.dehazeGrayscale(img);
+    encoding = "mono8";
+  }
+  else if (img.channels() == 3) {
+    out = d.dehazeRGB(img);
+    encoding = "bgr8";
+  }
+  else {
+    ROS_WARN_STREAM("[PreProcessing]: Invalid number of channels: " << img.channels());
+    return;
+  }
+
+  // convert OpenCV image to ROS message
+  cv_bridge::CvImage mono_cvi;
+  mono_cvi.header.stamp = image_msg->header.stamp;
+  mono_cvi.header.frame_id = image_msg->header.frame_id;
+  mono_cvi.encoding = encoding;
+  mono_cvi.image = out;
+  sensor_msgs::Image mono_im;
+  mono_cvi.toImageMsg(mono_im);
+  img_pub_.publish(mono_im, *info_msg);
 }

@@ -8,8 +8,7 @@
 
 Clahs::Clahs() {}
 
-Mat Clahs::compute(Mat Image, int NrY, int NrX) {
-
+Mat Clahs::clahsGrayscale(Mat Image, int NrY, int NrX) {
   // Initializations
   const int Min                   = 0;
   const int Max                   = 255;
@@ -24,13 +23,22 @@ Mat Clahs::compute(Mat Image, int NrY, int NrX) {
   const int HEQ_CLIP_SIMPLE       = 1;
   const int HEQ_CLIP_REDISTRIBUTE = 2;
 
-  int ClipLimit                   = 5;
+  double ClipLimit                = 5;
   int clip_type                   = 2;
+
+  // Initialize output
+  Mat CLAHSImage = Mat::zeros(YRes,XRes,CV_64FC1);
+
+  // Check if image is grayscale
+  if (Image.channels() != 1) {
+    ROS_WARN("[ImagePreprocessing]: Input image has more than one channel. It will be converted to grayscale. Use clahsRGB if image is RGB.");
+    cvtColor(Image, Image, CV_BGR2GRAY);
+  }
 
   // Check if image is uint8
   Mat I;
   if (Image.type() != CV_8U) {
-    ROS_WARN("[ImagePreprocessing]: Input image type is not CV_8U. It will be converted to grayscale CV_8U.");
+    ROS_WARN("[ImagePreprocessing]: Input image type is not CV_8U. It will be converted to CV_8U.");
     Image.convertTo(I,CV_8U);
   } else {
     Image.copyTo(I);
@@ -54,29 +62,30 @@ Mat Clahs::compute(Mat Image, int NrY, int NrX) {
   Mat MapArray = Mat::zeros(NrX*NrY*NrBins,1,CV_64FC1);
 
   // Determine properties of each subregion
-  int XSize = XRes/NrX;
-  int YSize = YRes/NrY;
-  int NrPixels = XSize*YSize;
+  double XSize = XRes/NrX;
+  double YSize = YRes/NrY;
+  double NrPixels = XSize*YSize;
 
   // calculate actual clip limit
   if (ClipLimit > 1) {
-    ClipLimit = (ClipLimit*NrPixels/NrBins);
+    ClipLimit = (ClipLimit*NrPixels/(double)NrBins);
     if (ClipLimit < 1)
       ClipLimit = 1;
     else
       ClipLimit = ClipLimit;
   } else {
     // large value, do not clip (AHE)
-    ClipLimit = std::numeric_limits<int>::max();
+    ClipLimit = std::numeric_limits<double>::max();
     clip_type = 0;
   }
 
   // calculate greylevel mappings for each subregion
   // calculate and process histograms for each subregion
-  for (int Y=0; Y<(NrY-1); Y++) {
-    for (int X=0; X<(NrX-1); X++) {
+  for (int Y=0; Y<=(NrY-1); Y++) {
+    for (int X=0; X<=(NrX-1); X++) {
       int Xtmp = X*XSize+1;
       int Ytmp = Y*YSize+1;
+
       Mat SubRegion = I(Range(Ytmp, Ytmp+YSize-1), Range(Xtmp, Xtmp+XSize-1));
 
       Mat Hist;
@@ -87,31 +96,29 @@ Mat Clahs::compute(Mat Image, int NrY, int NrX) {
       } else {
         ROS_ERROR("[ImagePreprocessing]: NrBins must be greater or equal to NrGreyLevels");
       }
-
       Hist.convertTo(Hist,CV_64FC1);
 
       // clip histogram, simple or redistribute depending on input parameters
       if (clip_type == HEQ_CLIP_REDISTRIBUTE) {
         Hist = ClipHistogram(Hist,NrBins,ClipLimit);
       } else if (clip_type == HEQ_CLIP_SIMPLE) {
-        Hist  = ClipHistogramSimple(Hist,ClipLimit);
+        Hist = ClipHistogramSimple(Hist,ClipLimit);
       }
 
       // create histogram mapping (uniform,exponential,or rayleigh)
       Hist = MapHistogram(Hist, Min, Max, NrBins, NrPixels, heq_type, alpha);
 
       // write working histogram into appropriate part of MapArray
-      Hist.copyTo( MapArray( Rect( (NrBins*(Y*NrX+X))+1, 0, Hist.cols, Hist.rows) ) );
+      Hist.copyTo( MapArray( Rect( 0, (NrBins*(Y*NrX+X)), Hist.cols, Hist.rows) ) );
     }
   }
 
   // interpolate greylevel mappings to get CLAHE image
   // make lookup table for mapping of grey values
-  Mat LUT = MakeLUT(NrGreyLevels, Min, Max, NrBins);
-  Mat CLAHSImage = Mat::zeros(YRes,XRes,CV_8U);
-  int lenY = 1;
+  Mat LUT = MakeLUT(NrGreyLevels, NrBins);
 
-  for (int Y=0; Y<NrY; Y++) {
+  int lenY = 0;
+  for (int Y=0; Y<=NrY; Y++) {
     int SubY, YU, YB;
     if (Y == 0) {       // special case top row
       SubY = floor(YSize/2);
@@ -126,8 +133,8 @@ Mat Clahs::compute(Mat Image, int NrY, int NrX) {
       YU = Y-1;
       YB = YU+1;
     }
-    int lenX = 1;
-    for (int X=0; X<NrX; X++) {
+    int lenX = 0;
+    for (int X=0; X<=NrX; X++) {
       int SubX, XL, XR;
       if (X==0) {       // special case Left column
         SubX = floor(XSize/2);
@@ -144,41 +151,64 @@ Mat Clahs::compute(Mat Image, int NrY, int NrX) {
       }
 
       // retrieve the appropriate histogram mappings from MapArray
-      Mat LU = MapArray( Range((NrBins*(YU*NrX +XL))+1, ((NrBins*(YU*NrX +XL)))+NrBins), Range(0, 0) );
-      Mat RU = MapArray( Range((NrBins*(YU*NrX +XR))+1, ((NrBins*(YU*NrX +XR)))+NrBins), Range(0, 0) );
-      Mat LB = MapArray( Range((NrBins*(YB*NrX +XL))+1, ((NrBins*(YB*NrX +XL)))+NrBins), Range(0, 0) );
-      Mat RB = MapArray( Range((NrBins*(YB*NrX +XR))+1, ((NrBins*(YB*NrX +XR)))+NrBins), Range(0, 0) );
+      Mat LU = MapArray( Range((NrBins*(YU*NrX +XL)), ((NrBins*(YU*NrX +XL)))+NrBins), Range(0, 1) );
+      Mat RU = MapArray( Range((NrBins*(YU*NrX +XR)), ((NrBins*(YU*NrX +XR)))+NrBins), Range(0, 1) );
+      Mat LB = MapArray( Range((NrBins*(YB*NrX +XL)), ((NrBins*(YB*NrX +XL)))+NrBins), Range(0, 1) );
+      Mat RB = MapArray( Range((NrBins*(YB*NrX +XR)), ((NrBins*(YB*NrX +XR)))+NrBins), Range(0, 1) );
 
       // interpolate the appropriate subregion
-      Mat SubRegion = I(Range(lenY, lenY+SubY-1), Range(lenX, lenX+SubX-1));
+      I.convertTo(I,CV_64FC1);
+      Mat SubRegion = I(Range(lenY, lenY+SubY), Range(lenX, lenX+SubX));
+      SubRegion.convertTo(SubRegion,CV_64FC1);
       Mat InterpD = Interpolate(SubRegion,LU,RU,LB,RB,SubX,SubY,LUT);
-      InterpD.copyTo( CLAHSImage( Rect( lenY, lenX, InterpD.cols, InterpD.rows) ) );
+      InterpD.copyTo( CLAHSImage( Rect( lenX, lenY, InterpD.cols, InterpD.rows) ) );
 
       lenX = lenX+SubX;
     }
     lenY = lenY+SubY;
   }
 
+  // Convert to CV_8U
+  CLAHSImage.convertTo(CLAHSImage,CV_8U);
   return CLAHSImage;
 }
 
+Mat Clahs::clahsRGB(Mat Image, int NrY, int NrX) {
+  // Split image in channels
+  std::vector<Mat> channels(3);
+  split(Image, channels);
+  Mat r, g, b;
+  channels[2].convertTo(r,CV_8U);
+  channels[1].convertTo(g,CV_8U);
+  channels[0].convertTo(b,CV_8U);
+
+  // Compute
+  Mat cr = clahsGrayscale(r,5,4);
+  Mat cg = clahsGrayscale(g,5,4);
+  Mat cb = clahsGrayscale(b,5,4);
+
+  Mat out;
+  Mat q[] = {cb, cg, cr};
+  merge(q, 3, out);
+  return out;
+}
+
 Mat Clahs::MakeLUT(const int& NrGreyLevels,
-                   const int& Min,
-                   const int& Max,
                    const int& NrBins) {
   Mat LUT = Mat::zeros(NrGreyLevels,1,CV_64FC1);
-  int BinSize = 1 + floor((Max-Min)/NrBins);
-  int interval = Max-Min;
-  Mat i = linspace(Min+1,Max+1, interval);
-  for (int j = 0; j < interval; ++j) {
-    LUT.at<double>(j,0) = std::min(1.0 + floor((j-Min)/BinSize), (double)NrBins);
+  double count = 2.0;
+  for (int j = 0; j < LUT.rows; ++j) {
+    if (count > NrBins)
+      count = NrBins;
+    LUT.at<double>(j,0) = count;
+    count++;
   }
   return LUT;
 }
 
 Mat Clahs::ClipHistogram(const Mat& Histogram,
                          const int& NrGreyLevels,
-                         const int& ClipLimit) {
+                         const double& ClipLimit) {
   Mat NewHistogram;
 
   // number of excess pixels created by clipping
@@ -187,45 +217,59 @@ Mat Clahs::ClipHistogram(const Mat& Histogram,
   double NrExcess = sum(max_hist)[0];
 
   // # of elements to be redist'ed to each bin
-  int BinIncr = floor(NrExcess/NrGreyLevels);
+  double BinIncr = floor(NrExcess/NrGreyLevels);
 
   // max bin value where redist. will be above Climit
-  int Upper = ClipLimit - BinIncr;
+  double Upper = ClipLimit - BinIncr;
 
   // clip the histogram to ClipLimit
   NewHistogram = min(Histogram, ClipLimit);
 
   // add partial BinIncr pixels to bins up to ClipLimit
   Mat ii = NewHistogram > Upper;
-  Mat H(ii.rows,1,CV_64FC1);
-  for (int i = 0; i < ii.rows; ++i) {
-    H.at<double>(i,0) = NewHistogram.at<double>(ii.at<double>(i,0));
+  ii.convertTo(ii,CV_64FC1);
+  Mat H;
+  for (int i = 0; i < ii.rows; i++) {
+    if (ii.at<double>(i,0) == 255) {
+      H.push_back(NewHistogram.row(i));
+    }
   }
   NrExcess -= sum(ClipLimit-H)[0];
 
-  for (int j = 0; j < ii.rows; ++j) {
-    NewHistogram.at<double>(ii.at<double>(j,0)) = ClipLimit;
+  for (int j = 0; j < ii.rows; j++) {
+    if (ii.at<double>(j,0) == 255) {
+      NewHistogram.at<double>(j,0) = ClipLimit;
+    }
   }
 
   // add BinIncr to all other bins
+  int counter = 0;
   Mat jj = NewHistogram <= Upper;
+  jj.convertTo(jj,CV_64FC1);
+  for (int i=0; i<jj.rows; i++) {
+    if (jj.at<double>(i,0) == 255) {
+      counter++;
+    }
+  }
 
-  NrExcess -= jj.rows*BinIncr;
+  NrExcess -= counter*BinIncr;
 
   for (int j = 0; j < jj.rows; ++j) {
-    NewHistogram.at<double>(jj.at<double>(j,0)) += BinIncr;
+    if (jj.at<double>(j,0) == 255) {
+      NewHistogram.at<double>(j,0) += BinIncr;
+    }
   }
 
   ///////////
   // evenly redistribute remaining excess pixels
 
   while (NrExcess>0) {
-    int h = 1;
+    int h = 0;
     while ((h < NrGreyLevels) && (NrExcess > 0)) {
       // choose step to distribute the most excess evenly in one pass
       int StepSize = ceil(NrGreyLevels/NrExcess);
       int i = h;
-      while ((i<(NrGreyLevels+1)) && (NrExcess >0)) {
+      while ( (i < NrGreyLevels) && (NrExcess > 0)) {
         if (NewHistogram.at<double>(i,0) < ClipLimit) {
           NewHistogram.row(i) =  NewHistogram.row(i) + 1;
           NrExcess = NrExcess - 1;
@@ -235,11 +279,12 @@ Mat Clahs::ClipHistogram(const Mat& Histogram,
       h = h + 1; // avoid concentrating pixels in bin 1
     }
   }
+
   return NewHistogram;
 }
 
 Mat Clahs::ClipHistogramSimple(const Mat& Histogram,
-                               const int& ClipLimit) {
+                               const double& ClipLimit) {
   // This function performs clipping of the histogram
   // any bin with a value above the cliplimit is assigned the value of ClipLimit
 
@@ -252,7 +297,7 @@ Mat Clahs::MapHistogram(const Mat& Histogram,
                         const int& NrGreyLevels,
                         const int& NrofPixels,
                         const int& heq_type,
-                        const int& heq_alpha) {
+                        const double& heq_alpha) {
   // This function calculates the equalized lookup table (mapping)
   // by cumulating the input histogram
   // Note: Lookup table is rescaled in the range [Min..Max].
@@ -264,7 +309,7 @@ Mat Clahs::MapHistogram(const Mat& Histogram,
   const int HEQ_EXPONENTIAL = 2;
   const int HEQ_RAYLEIGH    = 3;
 
-  double Scale = (Max-Min)/NrofPixels;
+  double Scale = ((double)Max-(double)Min)/(double)NrofPixels;
 
   switch (heq_type) {
     case HEQ_UNIFORM:
@@ -290,7 +335,7 @@ Mat Clahs::MapHistogram(const Mat& Histogram,
       double hconst = 2*heq_alpha*heq_alpha;
       double vmax = 1 - exp((-1/hconst));
       Mat dst;
-      log(1-vmax*(Sum/NrofPixels), dst);
+      log(1-vmax*(Sum/(double)NrofPixels), dst);
       Mat temp;
       sqrt(-hconst*dst, temp);
       output = min(temp*Max,Max); //limit range to Max
@@ -316,14 +361,15 @@ Mat Clahs::Interpolate(const Mat& SubRegion,
                        const int& XSize,
                        const int& YSize,
                        const Mat& LUT) {
+
   int Num = XSize * YSize; //Normalization factor
   Mat BinValues = buildbyIndices(LUT, SubRegion);
 
   Mat XInvCoef;
   int dec1 = XSize;
-  Mat row1 = Mat::zeros(1,XSize,CV_8U);
+  Mat row1 = Mat::zeros(1,XSize,CV_64FC1);
   for (uint i=0; i<XSize; i++) {
-    row1.at<uint>(i,0) = dec1;
+    row1.at<double>(0,i) = dec1;
     dec1--;
   }
   for (uint j=0; j<YSize; j++) {
@@ -331,19 +377,19 @@ Mat Clahs::Interpolate(const Mat& SubRegion,
   }
 
   uint dec2 = YSize;
-  Mat YInvCoef = Mat::zeros(YSize,XSize,CV_8U);
+  Mat YInvCoef = Mat::zeros(YSize,XSize,CV_64FC1);
   for (uint i=0; i<YSize; i++) {
     for (uint j=0; j<XSize; j++) {
-      YInvCoef.at<uint>(i,j) = dec2;
+      YInvCoef.at<double>(i,j) = dec2;
     }
     dec2--;
   }
 
   Mat XCoef;
   int inc1 = 0;
-  Mat row2 = Mat::zeros(1,XSize,CV_8U);
+  Mat row2 = Mat::zeros(1,XSize,CV_64FC1);
   for (uint i=0; i<XSize; i++) {
-    row2.at<uint>(i,0) = inc1;
+    row2.at<double>(0,i) = inc1;
     inc1++;
   }
   for (uint j=0; j<YSize; j++) {
@@ -351,10 +397,10 @@ Mat Clahs::Interpolate(const Mat& SubRegion,
   }
 
   uint inc2 = 0;
-  Mat YCoef = Mat::zeros(YSize,XSize,CV_8U);
+  Mat YCoef = Mat::zeros(YSize,XSize,CV_64FC1);
   for (uint i=0; i<YSize; i++) {
     for (uint j=0; j<XSize; j++) {
-      YCoef.at<uint>(i,j) = inc2;
+      YCoef.at<double>(i,j) = inc2;
     }
     inc2++;
   }
@@ -363,11 +409,12 @@ Mat Clahs::Interpolate(const Mat& SubRegion,
   Mat MapRU_red = buildbyIndices(MapRU, BinValues);
   Mat MapLB_red = buildbyIndices(MapLB, BinValues);
   Mat MapRB_red = buildbyIndices(MapRB, BinValues);
+
   Mat InterpRegion = Mat::zeros(MapLU_red.rows,MapLU_red.cols,CV_64FC1);
   for (uint i=0; i<MapLU_red.rows; i++) {
     for (uint j=0; j<MapLU_red.cols; j++) {
-      InterpRegion.at<double>(i,j) = YInvCoef.at<double>(i,j) * ( XInvCoef.at<double>(i,j)*MapLU_red.at<double>(i,j) + XCoef.at<double>(i,j)*MapRU_red.at<double>(i,j) ) +
-                                     YCoef.at<double>(i,j) * ( XInvCoef.at<double>(i,j)*MapLB_red.at<double>(i,j) + XCoef.at<double>(i,j)*MapRB_red.at<double>(i,j) );
+      InterpRegion.at<double>(i,j) = ( YInvCoef.at<double>(i,j) * ( XInvCoef.at<double>(i,j)*MapLU_red.at<double>(i,j) + XCoef.at<double>(i,j)*MapRU_red.at<double>(i,j) ) +
+                                     YCoef.at<double>(i,j) * ( XInvCoef.at<double>(i,j)*MapLB_red.at<double>(i,j) + XCoef.at<double>(i,j)*MapRB_red.at<double>(i,j) ) ) / Num;
     }
   }
 
@@ -375,11 +422,11 @@ Mat Clahs::Interpolate(const Mat& SubRegion,
 }
 
 Mat Clahs::buildbyIndices(const Mat& vector, const Mat& indices) {
-  Mat output = Mat::zeros(indices.rows,indices.cols,CV_8U);
+  Mat output = Mat::zeros(indices.rows,indices.cols,CV_64FC1);
   for (int i=0; i<indices.rows; i++) {
     for (int j=0; j<indices.cols; j++) {
-      uint idx = indices.at<uint>(i,j) + 1;
-      output.at<uint>(i,j) = vector.at<uint>(idx,0);
+      double idx = indices.at<double>(i,j) + 1;
+      output.at<double>(i,j) = vector.at<double>(idx,0);
     }
   }
   return output;
