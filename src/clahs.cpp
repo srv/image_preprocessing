@@ -65,7 +65,6 @@ void Clahs::clahsGrayscale(const Mat& Image, Mat& Out, const int& NrY, const int
   }
 
   // Check if image is uint8
-
   if (I.type() != CV_8U) {
     ROS_WARN("[ImagePreprocessing]: Input image type is not CV_8U. It will be converted to CV_8U.");
     I.convertTo(I,CV_8U);
@@ -140,6 +139,12 @@ void Clahs::clahsGrayscale(const Mat& Image, Mat& Out, const int& NrY, const int
     }
   }
 
+  // Convert to double
+  I.convertTo(I,CV_64FC1);
+
+  // Unsaturate the image
+  I.setTo(250, I > 250);
+
   // interpolate greylevel mappings to get CLAHE image
   // make lookup table for mapping of grey values
   Mat LUT = MakeLUT(NrGreyLevels, NrBins);
@@ -184,9 +189,8 @@ void Clahs::clahsGrayscale(const Mat& Image, Mat& Out, const int& NrY, const int
       Mat RB = MapArray( Range((NrBins*(YB*NrX +XR)), ((NrBins*(YB*NrX +XR)))+NrBins), Range(0, 1) );
 
       // interpolate the appropriate subregion
-      I.convertTo(I,CV_64FC1);
       Mat SubRegion = I(Range(lenY, lenY+SubY), Range(lenX, lenX+SubX));
-      SubRegion.convertTo(SubRegion,CV_64FC1);
+
       Mat InterpD = Interpolate(SubRegion,LU,RU,LB,RB,SubX,SubY,LUT);
       InterpD.copyTo( CLAHSImage( Rect( lenX, lenY, InterpD.cols, InterpD.rows) ) );
 

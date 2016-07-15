@@ -71,11 +71,11 @@ target_link_libraries(vignetting_remover
   ${catkin_LIBRARIES}
 )
 
-add_executable(clahs
+add_executable(clahs_node
   src/nodes/clahs_node.cpp
   src/mono_clahs.cpp
   src/clahs.cpp)
-target_link_libraries(clahs
+target_link_libraries(clahs_node
   ${catkin_LIBRARIES}
 )
 
