@@ -10,6 +10,7 @@
 
 #include <image_preprocessing/stereo_dehazer.h>
 #include <cv_bridge/cv_bridge.h>
+#include <math.h>
 
 using namespace std;
 using namespace cv;
@@ -19,100 +20,82 @@ StereoDehazer::StereoDehazer(ros::NodeHandle nh, ros::NodeHandle nhp)
     : nh_(nh), nhp_(nhp) {
   // Topic parameters
   string stereo_ns = nh_.resolveName("stereo");
+
   nhp_.param("left_mono_topic", left_mono_topic_,
-    string("/scaled/left/image_rect"));
+    string("/left/image_rect"));
   nhp_.param("right_mono_topic", right_mono_topic_,
-    string("/scaled/right/image_rect"));
-  nhp_.param("left_mono_info_topic", left_mono_info_topic_,
-    string("/scaled/left/camera_info"));
-  nhp_.param("right_mono_info_topic", right_mono_info_topic_,
-    string("/scaled/right/camera_info"));
+    string("/right/image_rect"));
+
   nhp_.param("left_color_topic", left_color_topic_,
     string("/left/image_rect_color"));
   nhp_.param("right_color_topic", right_color_topic_,
     string("/right/image_rect_color"));
+
   nhp_.param("left_info_topic", left_info_topic_,
     string("/left/camera_info"));
   nhp_.param("right_info_topic", right_info_topic_,
     string("/right/camera_info"));
 
-  block_matcher_.setDisparityRange(96);
-  block_matcher_.setPreFilterSize(9);
-  block_matcher_.setPreFilterCap(31);
-  block_matcher_.setCorrelationWindowSize(17);
-  block_matcher_.setMinDisparity(2);
-  block_matcher_.setTextureThreshold(10);
-  block_matcher_.setUniquenessRatio(10);
-  block_matcher_.setSpeckleSize(200);
-  block_matcher_.setSpeckleRange(4);
+  nhp_.param("cloud_topic", cloud_topic_,
+    string("/points2"));
 
   // Topics subscriptions
   image_transport::ImageTransport it(nh_);
-  left_mono_sub_.subscribe(it,
-    ros::names::clean(stereo_ns + left_mono_topic_),  1);
-  right_mono_sub_.subscribe(it,
-    ros::names::clean(stereo_ns + right_mono_topic_), 1);
-  left_mono_info_sub_.subscribe(nh_,
-    ros::names::clean(stereo_ns + left_info_topic_),  1);
-  right_mono_info_sub_.subscribe(nh_,
-    ros::names::clean(stereo_ns + right_info_topic_), 1);
+  left_color_sub_.subscribe(it,
+    ros::names::clean(stereo_ns + left_color_topic_),  3);
+  right_color_sub_.subscribe(it,
+    ros::names::clean(stereo_ns + right_color_topic_), 3);
+  left_color_info_sub_.subscribe(nh_,
+    ros::names::clean(stereo_ns + left_info_topic_),  3);
+  right_color_info_sub_.subscribe(nh_,
+    ros::names::clean(stereo_ns + right_info_topic_), 3);
+  cloud_color_sub_.subscribe(nh_,
+    ros::names::clean(stereo_ns + cloud_topic_), 3);
 
-  sync_pc_.reset(new SyncStereo(StereoSyncPolicy(2),
+  left_mono_sub_.subscribe(it,
+    ros::names::clean(stereo_ns + left_mono_topic_),  3);
+  right_mono_sub_.subscribe(it,
+    ros::names::clean(stereo_ns + right_mono_topic_), 3);
+  left_mono_info_sub_.subscribe(nh_,
+    ros::names::clean(stereo_ns + left_info_topic_),  3);
+  right_mono_info_sub_.subscribe(nh_,
+    ros::names::clean(stereo_ns + right_info_topic_), 3);
+
+  sync_color_.reset(new SyncColor(SyncColorPolicy(5),
                                   left_color_sub_,
                                   right_color_sub_,
-                                  left_info_sub_,
-                                  right_info_sub_) );
-  sync_pc_->registerCallback(boost::bind(
-      &StereoDehazer::points2Cb,
-      this, _1, _2, _3, _4));
+                                  left_color_info_sub_,
+                                  right_color_info_sub_,
+                                  cloud_color_sub_) );
+  sync_color_->registerCallback(boost::bind(
+      &StereoDehazer::colorCb,
+      this, _1, _2, _3, _4, _5));
 
-  sync_mono_.reset(new SyncStereo(StereoSyncPolicy(2),
-                                  left_mono_sub_,
-                                  right_mono_sub_,
-                                  left_mono_info_sub_,
-                                  right_mono_info_sub_) );
+  sync_mono_.reset(new SyncMono(SyncMonoPolicy(5),
+                                left_mono_sub_,
+                                right_mono_sub_,
+                                left_mono_info_sub_,
+                                right_mono_info_sub_) );
   sync_mono_->registerCallback(boost::bind(
-      &StereoDehazer::callbackMono,
+      &StereoDehazer::monoCb,
       this, _1, _2, _3, _4));
 
   // Set the image publishers before the streaming
   left_mono_pub_   = it.advertiseCamera(
-    ros::names::clean(stereo_ns + "/scaled/enhanced/left/image_rect"),  1);
+    ros::names::clean(stereo_ns + "/enhanced/left/image_rect"),  1);
   right_mono_pub_  = it.advertiseCamera(
-    ros::names::clean(stereo_ns + "/scaled/enhanced/right/image_rect"), 1);
+    ros::names::clean(stereo_ns + "/enhanced/right/image_rect"), 1);
+
+  left_color_pub_   = it.advertiseCamera(
+    ros::names::clean(stereo_ns + "/enhanced/left/image_rect_color"),  1);
+  right_color_pub_  = it.advertiseCamera(
+    ros::names::clean(stereo_ns + "/enhanced/right/image_rect_color"), 1);
 
   // Create the callback with the clouds
-  boost::lock_guard<boost::mutex> lock(connect_mutex_);
-  pub_points2_  = nh.advertise<PointCloud2>(
-    ros::names::clean(stereo_ns + "/enhanced/points2"),
-    1, boost::bind(&StereoDehazer::connectCb, this),
-    boost::bind(&StereoDehazer::connectCb, this));
+  pub_points2_ = nh.advertise< pcl::PointCloud<pcl::PointXYZRGB> >(
+    ros::names::clean(stereo_ns + "/enhanced/points2"), 1);
 
   ROS_INFO("Stereo Image Enhacer Initialized!");
-}
-
-// Handles (un)subscribing when clients (un)subscribe
-void StereoDehazer::connectCb() {
-  boost::lock_guard<boost::mutex> lock(connect_mutex_);
-  if (pub_points2_.getNumSubscribers() == 0) {
-    ROS_INFO("[SIE]: Unsubscribing from left & disparity images.");
-    left_color_sub_.unsubscribe();
-    right_color_sub_ .unsubscribe();
-    left_info_sub_ .unsubscribe();
-    right_info_sub_.unsubscribe();
-  } else if (!left_color_sub_.getSubscriber()) {
-    ROS_INFO("[SIE]: Subscribing to left & disparity images.");
-    image_transport::ImageTransport it(nh_);
-    string stereo_ns = nh_.resolveName("stereo");
-    left_color_sub_ .subscribe(it,
-      ros::names::clean(stereo_ns + left_color_topic_), 1);
-    right_color_sub_  .subscribe(it,
-      ros::names::clean(stereo_ns + right_color_topic_),  1);
-    left_info_sub_  .subscribe(nh_,
-      ros::names::clean(stereo_ns + left_info_topic_),  1);
-    right_info_sub_ .subscribe(nh_,
-      ros::names::clean(stereo_ns + right_info_topic_), 1);
-  }
 }
 
 /** \brief Stereo callback. This function is called when synchronized
@@ -123,10 +106,10 @@ void StereoDehazer::connectCb() {
   * \param l_info left stereo info message of type sensor_msgs::CameraInfo
   * \param r_info right stereo info message of type sensor_msgs::CameraInfo
   */
-void StereoDehazer::callbackMono(const ImageConstPtr& l_img_msg,
-                                 const ImageConstPtr& r_img_msg,
-                                 const CameraInfoConstPtr& l_info_msg,
-                                 const CameraInfoConstPtr& r_info_msg) {
+void StereoDehazer::monoCb(const ImageConstPtr& l_img_msg,
+                           const ImageConstPtr& r_img_msg,
+                           const CameraInfoConstPtr& l_info_msg,
+                           const CameraInfoConstPtr& r_info_msg) {
   if (left_mono_pub_.getNumSubscribers() > 0) {
     Mat l_img_mono = cv_bridge::toCvShare(l_img_msg,
                                         image_encodings::MONO8)->image;
@@ -157,160 +140,92 @@ void StereoDehazer::callbackMono(const ImageConstPtr& l_img_msg,
   }
 }
 
-PointCloud2Ptr StereoDehazer::getPointcloud(
-    const ImageConstPtr& l_image_msg,
-    const stereo_msgs::DisparityImageConstPtr& disp_msg) {
-  // Calculate point cloud
-  const Image& dimage = disp_msg->image;
-  const cv::Mat_<float> dmat(dimage.height, dimage.width, (float*)&dimage.data[0], dimage.step);
-  model_.projectDisparityImageTo3d(dmat, points_mat_, true);
-  cv::Mat_<cv::Vec3f> mat = points_mat_;
 
-  // Fill in new PointCloud2 message (2D image-like layout)
-  PointCloud2Ptr points_msg = boost::make_shared<PointCloud2>();
-  points_msg->header = disp_msg->header;
-  points_msg->height = mat.rows;
-  points_msg->width  = mat.cols;
-  points_msg->fields.resize (4);
-  points_msg->fields[0].name = "x";
-  points_msg->fields[0].offset = 0;
-  points_msg->fields[0].count = 1;
-  points_msg->fields[0].datatype = PointField::FLOAT32;
-  points_msg->fields[1].name = "y";
-  points_msg->fields[1].offset = 4;
-  points_msg->fields[1].count = 1;
-  points_msg->fields[1].datatype = PointField::FLOAT32;
-  points_msg->fields[2].name = "z";
-  points_msg->fields[2].offset = 8;
-  points_msg->fields[2].count = 1;
-  points_msg->fields[2].datatype = PointField::FLOAT32;
-  points_msg->fields[3].name = "rgb";
-  points_msg->fields[3].offset = 12;
-  points_msg->fields[3].count = 1;
-  points_msg->fields[3].datatype = PointField::FLOAT32;
-  // points_msg->is_bigendian = false; ???
-  static const int STEP = 16;
-  points_msg->point_step = STEP;
-  points_msg->row_step = points_msg->point_step * points_msg->width;
-  points_msg->data.resize(points_msg->row_step * points_msg->height);
-  points_msg->is_dense = false;  // there may be invalid points
+void StereoDehazer::colorCb(const ImageConstPtr& l_img_msg,
+                            const ImageConstPtr& r_img_msg,
+                            const CameraInfoConstPtr& l_info_msg,
+                            const CameraInfoConstPtr& r_info_msg,
+                            const sensor_msgs::PointCloud2ConstPtr& cloud_msg) {
 
-  float bad_point = std::numeric_limits<float>::quiet_NaN();
-  int offset = 0;
-  for (int v = 0; v < mat.rows; ++v) {
-    for (int u = 0; u < mat.cols; ++u, offset += STEP) {
-      if (isValidPoint(mat(v, u))) {
-        // x,y,z,rgba
-        memcpy(&points_msg->data[offset + 0], &mat(v, u)[0], sizeof(float));
-        memcpy(&points_msg->data[offset + 4], &mat(v, u)[1], sizeof(float));
-        memcpy(&points_msg->data[offset + 8], &mat(v, u)[2], sizeof(float));
-      } else {
-        memcpy(&points_msg->data[offset + 0], &bad_point, sizeof(float));
-        memcpy(&points_msg->data[offset + 4], &bad_point, sizeof(float));
-        memcpy(&points_msg->data[offset + 8], &bad_point, sizeof(float));
-      }
-    }
+  // Left image must be dehazed if exists a subscription to points2
+  Mat l_img_color;
+  Mat deh_color_left;
+  if (left_color_pub_.getNumSubscribers() > 0 || pub_points2_.getNumSubscribers() > 0) {
+    l_img_color = cv_bridge::toCvShare(l_img_msg,
+                                        image_encodings::BGR8)->image;
+    deh_color_left  = d_.dehazeRGB(l_img_color);
+    // convert OpenCV image to ROS message
+    cv_bridge::CvImage color_left_cvi;
+    color_left_cvi.header.stamp = l_img_msg->header.stamp;
+    color_left_cvi.header.frame_id = l_img_msg->header.frame_id;
+    color_left_cvi.encoding = "bgr8";
+    color_left_cvi.image = deh_color_left;
+    sensor_msgs::Image color_left_im;
+    color_left_cvi.toImageMsg(color_left_im);
+    left_color_pub_.publish(color_left_im,  *l_info_msg);
+  }
+  if (right_color_pub_.getNumSubscribers() > 0) {
+    Mat r_img_color = cv_bridge::toCvShare(r_img_msg,
+                                        image_encodings::BGR8)->image;
+    Mat deh_color_right  = d_.dehazeRGB(r_img_color);
+    // convert OpenCV image to ROS message
+    cv_bridge::CvImage color_right_cvi;
+    color_right_cvi.header.stamp = r_img_msg->header.stamp;
+    color_right_cvi.header.frame_id = r_img_msg->header.frame_id;
+    color_right_cvi.encoding = "bgr8";
+    color_right_cvi.image = deh_color_right;
+    sensor_msgs::Image color_right_im;
+    color_right_cvi.toImageMsg(color_right_im);
+    right_color_pub_.publish(color_right_im, *r_info_msg);
   }
 
-  // Fill in color
-  namespace enc = sensor_msgs::image_encodings;
-  const std::string& encoding = l_image_msg->encoding;
-  offset = 0;
-  if (encoding == enc::RGB8) {
-    const cv::Mat_<cv::Vec3b> color(l_image_msg->height, l_image_msg->width,
-                                    (cv::Vec3b*)&l_image_msg->data[0],
-                                    l_image_msg->step);
-    // Process the image
-    cv::Mat color_dehazed  = d_.dehazeRGB(color);
-    for (int v = 0; v < mat.rows; ++v) {
-      for (int u = 0; u < mat.cols; ++u, offset += STEP) {
-        if (isValidPoint(mat(v, u))) {
-          const cv::Vec3b& rgb = color_dehazed.at<cv::Vec3b>(v, u);
-          int32_t rgb_packed = (rgb[0] << 16) | (rgb[1] << 8) | rgb[2];
-          memcpy(&points_msg->data[offset + 12], &rgb_packed, sizeof(int32_t));
-        } else {
-          memcpy(&points_msg->data[offset + 12], &bad_point, sizeof(float));
-        }
-      }
-    }
-  } else if (encoding == enc::BGR8) {
-    const cv::Mat_<cv::Vec3b> color(l_image_msg->height, l_image_msg->width,
-                                    (cv::Vec3b*)&l_image_msg->data[0],
-                                    l_image_msg->step);
-    // Process the image
-    const cv::Mat_<cv::Vec3b> color_dehazed(d_.dehazeRGB(color));
-    for (int v = 0; v < mat.rows; ++v) {
-      for (int u = 0; u < mat.cols; ++u, offset += STEP) {
-        if (isValidPoint(mat(v, u))) {
-          const cv::Vec3b& bgr = color_dehazed.at<cv::Vec3b>(v, u);
-          int32_t rgb_packed = (bgr[2] << 16) | (bgr[1] << 8) | bgr[0];
-          memcpy(&points_msg->data[offset + 12], &rgb_packed, sizeof(int32_t));
-        } else {
-          memcpy(&points_msg->data[offset + 12], &bad_point, sizeof(float));
-        }
-      }
-    }
-  } else {
-    ROS_WARN_THROTTLE(30, "Could not fill color channel of the point cloud, "
-                          "unsupported encoding '%s'", encoding.c_str());
-  }
-  return points_msg;
-}
-
-stereo_msgs::DisparityImagePtr StereoDehazer::getDisparity(
-    const ImageConstPtr& l_image_msg,
-    const ImageConstPtr& r_image_msg,
-    const CameraInfoConstPtr& l_info_msg,
-    const CameraInfoConstPtr& r_info_msg) {
-  // Allocate new disparity image message
-  stereo_msgs::DisparityImagePtr disp_msg = boost::make_shared<stereo_msgs::DisparityImage>();
-  disp_msg->header         = l_info_msg->header;
-  disp_msg->image.header   = l_info_msg->header;
-
-  // Compute window of (potentially) valid disparities
-  int border   = block_matcher_.getCorrelationWindowSize() / 2;
-  int left   = block_matcher_.getDisparityRange()
-    + block_matcher_.getMinDisparity() + border - 1;
-  int wtf = (block_matcher_.getMinDisparity() >= 0) ?
-    border + block_matcher_.getMinDisparity() :
-    std::max(border, -block_matcher_.getMinDisparity());
-  int right  = disp_msg->image.width - 1 - wtf;
-  int top    = border;
-  int bottom = disp_msg->image.height - 1 - border;
-  disp_msg->valid_window.x_offset = left;
-  disp_msg->valid_window.y_offset = top;
-  disp_msg->valid_window.width    = right - left;
-  disp_msg->valid_window.height   = bottom - top;
-
-  // Create cv::Mat views onto all buffers
-  const cv::Mat_<uint8_t> l_image = cv_bridge::toCvShare(l_image_msg,
-    sensor_msgs::image_encodings::MONO8)->image;
-  const cv::Mat_<uint8_t> r_image = cv_bridge::toCvShare(r_image_msg,
-    sensor_msgs::image_encodings::MONO8)->image;
-
-  // Perform block matching to find the disparities
-  block_matcher_.processDisparity(l_image, r_image, model_, *disp_msg);
-
-  // Adjust for any x-offset between the principal points: d' = d - (cx_l - cx_r)
-  double cx_l = model_.left().cx();
-  double cx_r = model_.right().cx();
-  if (cx_l != cx_r) {
-    cv::Mat_<float> disp_image(disp_msg->image.height, disp_msg->image.width,
-                              reinterpret_cast<float*>(&disp_msg->image.data[0]),
-                              disp_msg->image.step);
-    cv::subtract(disp_image, cv::Scalar(cx_l - cx_r), disp_image);
-  }
-  return disp_msg;
-}
-
-void StereoDehazer::points2Cb(const ImageConstPtr& l_image_msg,
-                              const ImageConstPtr& r_image_msg,
-                              const CameraInfoConstPtr& l_info_msg,
-                              const CameraInfoConstPtr& r_info_msg) {
   // Update the camera model
-  model_.fromCameraInfo(l_info_msg, r_info_msg);
-  stereo_msgs::DisparityImagePtr disp_msg = getDisparity(l_image_msg, r_image_msg,
-                                            l_info_msg, r_info_msg);
-  PointCloud2Ptr points_msg = getPointcloud(l_image_msg, disp_msg);
-  pub_points2_.publish(points_msg);
+  if (pub_points2_.getNumSubscribers() > 0) {
+    image_geometry::PinholeCameraModel left_cam;
+    left_cam.fromCameraInfo(l_info_msg);
+
+    // Split enhanced image in channels
+    std::vector<Mat> channels(3);
+    split(deh_color_left, channels);
+    Mat r, g, b;
+    channels[0].convertTo(b,CV_8U);
+    channels[1].convertTo(g,CV_8U);
+    channels[2].convertTo(r,CV_8U);
+
+    std::vector<Mat> channels2(3);
+    split(l_img_color, channels2);
+    Mat ro, go, bo;
+    channels2[0].convertTo(bo,CV_8U);
+    channels2[1].convertTo(go,CV_8U);
+    channels2[2].convertTo(ro,CV_8U);
+
+    //  Convert the points2 to pcl
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_out(new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+    fromROSMsg(*cloud_msg, *cloud);
+
+    // For every point into the pointcloud, get the dehazed color from left image
+    int32_t tmp_rgb;
+    for (uint i=0; i<cloud->size(); i++) {
+      pcl::PointXYZRGB p = cloud->points[i];
+      if (isfinite(p.x) && isfinite(p.y) && isfinite(p.z)) {
+        cv::Point3d xyz(p.x, p.y, p.z);
+        cv::Point2d pixel = left_cam.project3dToPixel(xyz);
+
+        // Get the color of the corresponding pixel
+        uint8_t pr = r.at<uint8_t>(pixel.y, pixel.x);
+        uint8_t pg = g.at<uint8_t>(pixel.y, pixel.x);
+        uint8_t pb = b.at<uint8_t>(pixel.y, pixel.x);
+
+        int32_t tmp_rgb = (pr << 16) | (pg << 8) | pb;
+        p.rgb = *reinterpret_cast<float*>(&tmp_rgb);
+
+        cloud_out->push_back(p);
+      }
+    }
+
+    // Republish the pointcloud
+    cloud_out->header = pcl_conversions::toPCL(cloud_msg->header);
+    pub_points2_.publish(cloud_out);
+  }
 }

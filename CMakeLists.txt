@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
   stereo_msgs
   image_geometry
   stereo_image_proc
+  pcl_ros
 )
 
 find_package(OpenCV REQUIRED)
@@ -21,6 +22,9 @@ if (OPENMP_FOUND)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif()
+
+# Dependencies - PCL:
+find_package(PCL REQUIRED)
 
 catkin_package(
   INCLUDE_DIRS include
@@ -34,6 +38,7 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
+  ${PCL_INCLUDE_DIRS}
 )
 
 ## Executables

@@ -24,6 +24,11 @@
 #include <stereo_image_proc/processor.h>
 #include <boost/thread/mutex.hpp>
 
+#include <pcl_ros/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl/common/common.h>
+#include <pcl_conversions/pcl_conversions.h>
+
 class StereoDehazer {
  public:
   StereoDehazer() {}
@@ -39,64 +44,52 @@ class StereoDehazer {
   // Topic subscribers
   std::string left_color_topic_, right_color_topic_;
   std::string left_mono_topic_, right_mono_topic_;
-  std::string left_mono_info_topic_, right_mono_info_topic_;
   std::string left_info_topic_, right_info_topic_;
-
-  image_geometry::StereoCameraModel model_;
-  cv::Mat_<cv::Vec3f> points_mat_;  // scratch buffer
-  stereo_image_proc::StereoProcessor block_matcher_;
+  std::string cloud_topic_;
 
   // Subscribers
-  image_transport::SubscriberFilter left_color_sub_, right_color_sub_;
-  image_transport::SubscriberFilter left_mono_sub_, right_mono_sub_;
-  message_filters::Subscriber<sensor_msgs::CameraInfo> left_info_sub_,
-                                                       right_info_sub_,
+  image_transport::SubscriberFilter left_color_sub_,
+                                    right_color_sub_,
+                                    left_mono_sub_,
+                                    right_mono_sub_;
+  message_filters::Subscriber<sensor_msgs::CameraInfo> left_color_info_sub_,
+                                                       right_color_info_sub_,
                                                        left_mono_info_sub_,
                                                        right_mono_info_sub_;
+  message_filters::Subscriber<sensor_msgs::PointCloud2> cloud_color_sub_;
 
   // Topic sync properties (with pointcloud)
-  typedef message_filters::sync_policies::ExactTime<sensor_msgs::Image,
-                                                    sensor_msgs::Image,
-                                                    sensor_msgs::CameraInfo,
-                                                    sensor_msgs::CameraInfo>
-                                                    StereoSyncPolicy;
-  typedef message_filters::Synchronizer<StereoSyncPolicy> SyncStereo;
-  boost::shared_ptr<SyncStereo> sync_pc_, sync_mono_;
+  typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image,
+                                                          sensor_msgs::Image,
+                                                          sensor_msgs::CameraInfo,
+                                                          sensor_msgs::CameraInfo,
+                                                          sensor_msgs::PointCloud2> SyncColorPolicy;
+  typedef message_filters::Synchronizer<SyncColorPolicy> SyncColor;
+  boost::shared_ptr<SyncColor> sync_color_;
+
+  typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image,
+                                                          sensor_msgs::Image,
+                                                          sensor_msgs::CameraInfo,
+                                                          sensor_msgs::CameraInfo> SyncMonoPolicy;
+  typedef message_filters::Synchronizer<SyncMonoPolicy> SyncMono;
+  boost::shared_ptr<SyncMono> sync_mono_;
 
   // ROS Camera publisher
   //image_transport::CameraPublisher left_color_pub_, right_color_pub_;
-  image_transport::CameraPublisher left_mono_pub_, right_mono_pub_;
+  image_transport::CameraPublisher left_mono_pub_, right_mono_pub_, left_color_pub_, right_color_pub_;
 
   // points2 publisher
-  boost::mutex connect_mutex_;
   ros::Publisher pub_points2_;
 
-  // Protected functions and callbacks
-  void connectCb();
 
-  void callbackMono(const sensor_msgs::ImageConstPtr& l_img_msg,
-                    const sensor_msgs::ImageConstPtr& r_img_msg,
-                    const sensor_msgs::CameraInfoConstPtr& l_info_msg,
-                    const sensor_msgs::CameraInfoConstPtr& r_info_msg);
-  void points2Cb(const sensor_msgs::ImageConstPtr& l_img_msg,
-                 const sensor_msgs::ImageConstPtr& r_img_msg,
-                 const sensor_msgs::CameraInfoConstPtr& l_info_msg,
-                 const sensor_msgs::CameraInfoConstPtr& r_info_msg);
-
-  stereo_msgs::DisparityImagePtr getDisparity(
-    const sensor_msgs::ImageConstPtr& l_image_msg,
-    const sensor_msgs::ImageConstPtr& r_image_msg,
-    const sensor_msgs::CameraInfoConstPtr& l_info_msg,
-    const sensor_msgs::CameraInfoConstPtr& r_info_msg);
-
-  sensor_msgs::PointCloud2Ptr getPointcloud(
-    const sensor_msgs::ImageConstPtr& l_image_msg,
-    const stereo_msgs::DisparityImageConstPtr& disp_msg);
-
-  inline bool isValidPoint(const cv::Vec3f& pt) {
-    // Check both for disparities explicitly marked as invalid (where OpenCV maps pt.z to MISSING_Z)
-    // and zero disparities (point mapped to infinity).
-    return pt[2] != image_geometry::StereoCameraModel::MISSING_Z && !std::isinf(pt[2]);
-  }
+  void colorCb(const sensor_msgs::ImageConstPtr& l_img_msg,
+               const sensor_msgs::ImageConstPtr& r_img_msg,
+               const sensor_msgs::CameraInfoConstPtr& l_info_msg,
+               const sensor_msgs::CameraInfoConstPtr& r_info_msg,
+               const sensor_msgs::PointCloud2ConstPtr& cloud_msg);
+  void monoCb(const sensor_msgs::ImageConstPtr& l_img_msg,
+              const sensor_msgs::ImageConstPtr& r_img_msg,
+              const sensor_msgs::CameraInfoConstPtr& l_info_msg,
+              const sensor_msgs::CameraInfoConstPtr& r_info_msg);
 };
 #endif

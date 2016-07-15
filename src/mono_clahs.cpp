@@ -41,11 +41,11 @@ void MonoClahs::imageCallback(
   string encoding;
   Mat img = cv_image_ptr->image;
   if (img.channels() == 1) {
-    out = c.clahsGrayscale(img,5,4);
+    c.clahsGrayscale(img,out,5,4);
     encoding = "mono8";
   }
   else if (img.channels() == 3) {
-    out = c.clahsRGB(img,5,4);
+    c.clahsRGB(img,out,5,4);
     encoding = "bgr8";
   }
   else {

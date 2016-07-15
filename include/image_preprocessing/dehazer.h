@@ -8,13 +8,14 @@
 
 #include <opencv2/opencv.hpp>
 #include <ros/ros.h>
+#include <boost/thread.hpp>
 
 class Dehazer {
  public:
   Dehazer() {}
   cv::Mat dehazeRGB(cv::Mat img);
   cv::Mat dehazeGrayscale(cv::Mat img);
-  cv::Mat guidedFilter(cv::Mat img, cv::Mat guidance_img,
+  void guidedFilter(cv::Mat img, cv::Mat guidance_img, cv::Mat& out,
                        int local_window_radius, double eps);
 };
 #endif

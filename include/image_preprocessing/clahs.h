@@ -10,6 +10,8 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <math.h>
+#include <algorithm>
+#include <boost/thread.hpp>
 
 using namespace cv;
 
@@ -17,8 +19,8 @@ class Clahs {
   public:
     Clahs();
 
-    Mat clahsGrayscale(Mat Image, int NrY, int NrX);
-    Mat clahsRGB(Mat Image, int NrY, int NrX);
+    void clahsGrayscale(const Mat& Image, Mat& Out, const int& NrY, const int& NrX);
+    void clahsRGB(const Mat& Image, Mat& Out, const int& NrY, const int& NrX);
 
   protected:
     Mat MakeLUT(const int& NrGreyLevels,

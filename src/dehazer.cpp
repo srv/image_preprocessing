@@ -17,13 +17,13 @@ Mat Dehazer::dehazeRGB(Mat img) {
   std::vector<Mat> channels(3);
   split(img_float, channels);
 
-  Mat qr(img.rows, img.cols, CV_32FC1);
-  Mat qg(img.rows, img.cols, CV_32FC1);
-  Mat qb(img.rows, img.cols, CV_32FC1);
-
-  qr = guidedFilter(channels[2], channels[2], local_window_radius, eps);
-  qg = guidedFilter(channels[1], channels[1], local_window_radius, eps);
-  qb = guidedFilter(channels[0], channels[0], local_window_radius, eps);
+  Mat qr, qg, qb;
+  boost::thread thread1( boost::bind( &Dehazer::guidedFilter, this, channels[2], channels[2], boost::ref(qr), local_window_radius, eps ) );
+  boost::thread thread2( boost::bind( &Dehazer::guidedFilter, this, channels[1], channels[1], boost::ref(qg), local_window_radius, eps ) );
+  boost::thread thread3( boost::bind( &Dehazer::guidedFilter, this, channels[0], channels[0], boost::ref(qb), local_window_radius, eps ) );
+  thread1.join();
+  thread2.join();
+  thread3.join();
 
   Mat deh, deh_float;
   Mat q[] = {qb, qg, qr};
@@ -41,7 +41,8 @@ Mat Dehazer::dehazeGrayscale(Mat img) {
   Mat img_float;
   img.convertTo(img_float, CV_32F, 1/255.0);
 
-  Mat filt = guidedFilter(img_float, img_float, local_window_radius, eps);
+  Mat filt;
+  guidedFilter(img_float, img_float, filt, local_window_radius, eps);
 
   Mat deh;
   Mat result = (img_float - filt) * 5 + filt;
@@ -49,10 +50,11 @@ Mat Dehazer::dehazeGrayscale(Mat img) {
   return deh;
 }
 
-Mat Dehazer::guidedFilter(Mat img,  // p
-                              Mat guidance_img,  // I
-                              int local_window_radius,  // r
-                              double eps) {
+void Dehazer::guidedFilter(Mat img,  // p
+                           Mat guidance_img,  // I
+                           Mat& out,
+                           int local_window_radius,  // r
+                           double eps) {
   // [hei, wid] = size(I);
   int h = guidance_img.rows;
   int w = guidance_img.cols;
@@ -103,5 +105,5 @@ Mat Dehazer::guidedFilter(Mat img,  // p
 
   // q = mean_a .* I + mean_b; % Eqn. (8) in the paper;
   Mat q = mean_a.mul(guidance_img) + mean_b;
-  return q;
+  q.copyTo(out);
 }

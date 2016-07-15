@@ -4,11 +4,37 @@
 /// All rights reserved.
 
 #include <image_preprocessing/clahs.h>
-#include <algorithm>
 
 Clahs::Clahs() {}
 
-Mat Clahs::clahsGrayscale(Mat Image, int NrY, int NrX) {
+void Clahs::clahsRGB(const Mat& Image, Mat& Out, const int& NrY, const int& NrX) {
+
+  Mat I;
+  Image.copyTo(I);
+
+  // Split image in channels
+  std::vector<Mat> channels(3);
+  split(I, channels);
+  Mat r, g, b;
+  channels[0].convertTo(r,CV_8U);
+  channels[1].convertTo(g,CV_8U);
+  channels[2].convertTo(b,CV_8U);
+
+  // Compute
+  Mat cr, cg, cb;
+  boost::thread thread1( boost::bind( &Clahs::clahsGrayscale, this, r, boost::ref(cr), NrY, NrX ) );
+  boost::thread thread2( boost::bind( &Clahs::clahsGrayscale, this, g, boost::ref(cg), NrY, NrX ) );
+  boost::thread thread3( boost::bind( &Clahs::clahsGrayscale, this, b, boost::ref(cb), NrY, NrX ) );
+  thread1.join();
+  thread2.join();
+  thread3.join();
+
+  // Join channels
+  Mat q[] = {cr, cg, cb};
+  merge(q, 3, Out);
+}
+
+void Clahs::clahsGrayscale(const Mat& Image, Mat& Out, const int& NrY, const int& NrX) {
   // Initializations
   const int Min                   = 0;
   const int Max                   = 255;
@@ -26,22 +52,23 @@ Mat Clahs::clahsGrayscale(Mat Image, int NrY, int NrX) {
   double ClipLimit                = 5;
   int clip_type                   = 2;
 
+  Mat I;
+  Image.copyTo(I);
+
   // Initialize output
   Mat CLAHSImage = Mat::zeros(YRes,XRes,CV_64FC1);
 
   // Check if image is grayscale
-  if (Image.channels() != 1) {
+  if (I.channels() != 1) {
     ROS_WARN("[ImagePreprocessing]: Input image has more than one channel. It will be converted to grayscale. Use clahsRGB if image is RGB.");
-    cvtColor(Image, Image, CV_BGR2GRAY);
+    cvtColor(I, I, CV_BGR2GRAY);
   }
 
   // Check if image is uint8
-  Mat I;
-  if (Image.type() != CV_8U) {
+
+  if (I.type() != CV_8U) {
     ROS_WARN("[ImagePreprocessing]: Input image type is not CV_8U. It will be converted to CV_8U.");
-    Image.convertTo(I,CV_8U);
-  } else {
-    Image.copyTo(I);
+    I.convertTo(I,CV_8U);
   }
 
   // Sanity checks
@@ -170,27 +197,7 @@ Mat Clahs::clahsGrayscale(Mat Image, int NrY, int NrX) {
 
   // Convert to CV_8U
   CLAHSImage.convertTo(CLAHSImage,CV_8U);
-  return CLAHSImage;
-}
-
-Mat Clahs::clahsRGB(Mat Image, int NrY, int NrX) {
-  // Split image in channels
-  std::vector<Mat> channels(3);
-  split(Image, channels);
-  Mat r, g, b;
-  channels[2].convertTo(r,CV_8U);
-  channels[1].convertTo(g,CV_8U);
-  channels[0].convertTo(b,CV_8U);
-
-  // Compute
-  Mat cr = clahsGrayscale(r,5,4);
-  Mat cg = clahsGrayscale(g,5,4);
-  Mat cb = clahsGrayscale(b,5,4);
-
-  Mat out;
-  Mat q[] = {cb, cg, cr};
-  merge(q, 3, out);
-  return out;
+  CLAHSImage.copyTo(Out);
 }
 
 Mat Clahs::MakeLUT(const int& NrGreyLevels,
@@ -279,7 +286,6 @@ Mat Clahs::ClipHistogram(const Mat& Histogram,
       h = h + 1; // avoid concentrating pixels in bin 1
     }
   }
-
   return NewHistogram;
 }
 
@@ -414,7 +420,7 @@ Mat Clahs::Interpolate(const Mat& SubRegion,
   for (uint i=0; i<MapLU_red.rows; i++) {
     for (uint j=0; j<MapLU_red.cols; j++) {
       InterpRegion.at<double>(i,j) = ( YInvCoef.at<double>(i,j) * ( XInvCoef.at<double>(i,j)*MapLU_red.at<double>(i,j) + XCoef.at<double>(i,j)*MapRU_red.at<double>(i,j) ) +
-                                     YCoef.at<double>(i,j) * ( XInvCoef.at<double>(i,j)*MapLB_red.at<double>(i,j) + XCoef.at<double>(i,j)*MapRB_red.at<double>(i,j) ) ) / Num;
+                                       YCoef.at<double>(i,j) *    ( XInvCoef.at<double>(i,j)*MapLB_red.at<double>(i,j) + XCoef.at<double>(i,j)*MapRB_red.at<double>(i,j) ) ) / Num;
     }
   }
 
