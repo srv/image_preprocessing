@@ -4,7 +4,6 @@
 /// All rights reserved.
 
 #include <image_preprocessing/mono_dehazer.h>
-#include <image_preprocessing/dehazer.h>
 
 #include <cv_bridge/cv_bridge.h>
 
@@ -18,6 +17,7 @@ MonoDehazer::MonoDehazer(ros::NodeHandle nh, ros::NodeHandle nhp): nh_(nh), nhp_
 
   string output_namespace;
   nhp_.param("output_namespace", output_namespace, string("/dehazed"));
+  nhp_.param("is_rgb", is_rgb_, true);
 
   img_pub_ = it_.advertiseCamera(
     ros::names::clean(output_namespace + "/image_rect_color"),  1);
@@ -29,8 +29,13 @@ void MonoDehazer::imageCallback(
   cv_bridge::CvImagePtr cv_image_ptr;
 
   try {
-    cv_image_ptr = cv_bridge::toCvCopy(image_msg,
-                                       sensor_msgs::image_encodings::BGR8);
+    if (is_rgb_) {
+      cv_image_ptr = cv_bridge::toCvCopy(image_msg,
+                                         sensor_msgs::image_encodings::BGR8);
+    } else {
+      cv_image_ptr = cv_bridge::toCvCopy(image_msg,
+                                         sensor_msgs::image_encodings::MONO8);
+    }
   } catch (cv_bridge::Exception& e) {
     ROS_ERROR("cv_bridge exception: %s", e.what());
     return;

@@ -25,6 +25,8 @@ class MonoClahs {
   image_transport::CameraSubscriber camera_sub_;
   image_transport::CameraPublisher img_pub_;
 
+  bool is_rgb_; //!> Set to true when RGB
+
   void imageCallback(const sensor_msgs::ImageConstPtr &image_msg,
                      const sensor_msgs::CameraInfoConstPtr &info_msg);
 };

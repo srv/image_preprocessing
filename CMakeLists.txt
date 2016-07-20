@@ -79,6 +79,15 @@ target_link_libraries(clahs_node
   ${catkin_LIBRARIES}
 )
 
+add_executable(stereo_clahs_node
+  src/nodes/stereo_clahs_node.cpp
+  src/stereo_clahs.cpp
+  src/clahs.cpp)
+target_link_libraries(stereo_clahs_node
+  ${catkin_LIBRARIES}
+  ${Boost_Thread_LIBRARIES}
+)
+
 
 
 #############
