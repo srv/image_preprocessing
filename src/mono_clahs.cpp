@@ -8,6 +8,7 @@
 #include <cv_bridge/cv_bridge.h>
 
 using namespace cv;
+using namespace std;
 
 MonoClahs::MonoClahs(ros::NodeHandle nh, ros::NodeHandle nhp): nh_(nh), nhp_(nhp), it_(nh) {
   camera_sub_ = it_.subscribeCamera("image",

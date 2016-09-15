@@ -6,6 +6,7 @@
 #ifndef MONO_CLAHS_H
 #define MONO_CLAHS_H
 
+#include <string>
 #include <opencv2/opencv.hpp>
 #include <ros/ros.h>
 #include <sensor_msgs/Image.h>
