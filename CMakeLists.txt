@@ -50,6 +50,13 @@ target_link_libraries(dehazer_node
   ${catkin_LIBRARIES}
 )
 
+add_executable(color_correction_node
+  src/nodes/color_correction_node.cpp
+  src/color_correction.cpp)
+target_link_libraries(color_correction_node
+  ${catkin_LIBRARIES}
+)
+
 add_executable(stereo_dehazer_node
   src/nodes/stereo_dehazer_node.cpp
   src/stereo_dehazer.cpp
