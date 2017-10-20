@@ -1,33 +1,20 @@
 <launch>
-  <arg name="bagfiles2" default="/media/miquel/data/bagfiles/soller/2015-06-08-20-45-49_0.bag"/>
 
-  <arg name="bagfiles" default="/data/HD3/2015_06_08_valldemossa/2015-06-08-20-45-49_0.bag
-    /data/HD3/2015_06_08_valldemossa/2015-06-08-20-47-17_1.bag
-    /data/HD3/2015_06_08_valldemossa/2015-06-08-20-48-44_2.bag
-    /data/HD3/2015_06_08_valldemossa/2015-06-08-20-50-12_3.bag
-    /data/HD3/2015_06_08_valldemossa/2015-06-08-20-51-39_4.bag
-    /data/HD3/2015_06_08_valldemossa/2015-06-08-20-53-07_5.bag
-    /data/HD3/2015_06_08_valldemossa/2015-06-08-20-54-35_6.bag
-    /data/HD3/2015_06_08_valldemossa/2015-06-08-20-56-02_7.bag
-    /data/HD3/2015_06_08_valldemossa/2015-06-08-20-57-30_8.bag
-    /data/HD3/2015_06_08_valldemossa/2015-06-08-20-58-58_9.bag
-    /data/HD3/2015_06_08_valldemossa/2015-06-08-21-00-25_10.bag
-    /data/HD3/2015_06_08_valldemossa/2015-06-08-21-01-53_11.bag
-    /data/HD3/2015_06_08_valldemossa/2015-06-08-21-03-21_12.bag"/>
+  <arg name="bagfiles" default="/home/plnegre/bagfiles/images170927_1234_2017-09-27-10-43-51_17.bag"/>
 
-  <arg name="camera" default="stereo_down"/>
+  <arg name="camera" default="stereo_forward"/>
   <arg name="image" default="image_raw"/>
 
   <param name="use_sim_time" value="true"/>
 
-  <node pkg="rosbag" type="play" name="player" args="--clock -d 5 $(arg bagfiles2)" output="screen" />
+  <node pkg="rosbag" type="play" name="player" args="--clock -d 5 -l $(arg bagfiles)"/>
 
   <group ns="$(arg camera)">
-    <node pkg="stereo_image_proc" type="stereo_image_proc" name="stereo_image_proc" output="screen"/>
+    <node pkg="stereo_image_proc" type="stereo_image_proc" name="stereo_image_proc"/>
   </group>
 
   <group ns="/vig/$(arg camera)">
-    <node pkg="stereo_image_proc" type="stereo_image_proc" name="stereo_image_proc" output="screen"/>
+    <node pkg="stereo_image_proc" type="stereo_image_proc" name="stereo_image_proc"/>
   </group>
 
   <node pkg="image_preprocessing" type="vignetting_remover" name="vignetting_remover_l" output="screen">
@@ -42,4 +29,10 @@
     <param name="output_namespace" value="/vig/$(arg camera)/right"/>
     <remap from="image" to="$(arg camera)/right/$(arg image)"/>
   </node>
+
+  <node pkg="image_preprocessing" type="color_correction_image" name="color_correction_image" output="screen">
+    <remap from="/color_correction_image/input" to="/vig/$(arg camera)/left/image_rect_color"/>
+    <remap from="/color_correction_image/output" to="/vig/$(arg camera)/left/image_rect_color_corrected"/>
+  </node>
+
 </launch>

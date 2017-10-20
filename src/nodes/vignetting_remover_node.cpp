@@ -21,39 +21,31 @@ image_transport::CameraPublisher img_pub_;
 
 void imageCallback(const sensor_msgs::ImageConstPtr &image_msg,
                    const sensor_msgs::CameraInfoConstPtr &info_msg) {
-  if (img_pub_.getNumSubscribers() > 0) {
-    // cv_bridge::CvImagePtr cv_image_ptr;
-    // try {
-    //   cv_image_ptr = cv_bridge::toCvCopy(image_msg,
-    //                                      sensor_msgs::image_encodings::BGR8);
-    // } catch (cv_bridge::Exception& e) {
-    //   ROS_ERROR("cv_bridge exception: %s", e.what());
-    //   return;
-    // }
 
-    const cv::Mat img(image_msg->height, image_msg->width, CV_8UC1,
-                      const_cast<uint8_t*>(&image_msg->data[0]), image_msg->step);
+  // Exit if no subscribers
+  if (img_pub_.getNumSubscribers() == 0) return;
 
-    // Convert image to double
-    // Mat img = cv_image_ptr->image;
-    Mat img_d(img.size(), CV_64FC1);
-    img.convertTo(img_d, CV_64F, 1/255.0);
+  const cv::Mat img(image_msg->height, image_msg->width, CV_8UC1,
+    const_cast<uint8_t*>(&image_msg->data[0]), image_msg->step);
 
-    // Correct
-    Mat corrected;
-    multiply(img_d - avg_, gain_, corrected);
-    corrected = corrected + avg_ + offset_;
+  // Convert image to double
+  Mat img_d(img.size(), CV_64FC1);
+  img.convertTo(img_d, CV_64F, 1/255.0);
 
-    Mat corrected_uchar;
-    corrected = corrected * 255.0;
-    corrected.convertTo(corrected_uchar, CV_8U);
+  // Correct
+  Mat corrected;
+  multiply(img_d - avg_, gain_, corrected);
+  corrected = corrected + avg_; // + offset_;
 
-    // Publish
-    sensor_msgs::ImagePtr out_msg = cv_bridge::CvImage(image_msg->header,
-                                                       "bayer_grbg8",
-                                                       corrected_uchar).toImageMsg();
-    img_pub_.publish(out_msg, info_msg);
-  }
+  Mat corrected_uchar;
+  corrected = corrected * 255.0;
+  corrected.convertTo(corrected_uchar, CV_8U);
+
+  // Publish
+  sensor_msgs::ImagePtr out_msg = cv_bridge::CvImage(image_msg->header,
+                                                     image_msg->encoding,
+                                                     corrected_uchar).toImageMsg();
+  img_pub_.publish(out_msg, info_msg);
 }
 
 void vignettingRemover(ros::NodeHandle nh, ros::NodeHandle nhp)  {
@@ -77,7 +69,7 @@ void vignettingRemover(ros::NodeHandle nh, ros::NodeHandle nhp)  {
   avg_ = mean_d;
 
   // Compute gain and offset for posterior correction
-  Mat desired_avg = 0.3*Mat::ones(mean_d.size(), CV_64FC1);
+  Mat desired_avg = 0.05*Mat::ones(mean_d.size(), CV_64FC1);
   double desired_sigma = 1.0/6;
   divide(Mat::ones(std_d.size(), CV_64FC1), std_d, gain_, desired_sigma);
   offset_ = desired_avg - mean_d;

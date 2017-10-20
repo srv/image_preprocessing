@@ -1,0 +1,9 @@
+<launch>
+  <arg name="camera" default="stereo_forward"/>
+
+  <node pkg="image_preprocessing" type="color_correction_image" name="color_correction_image" output="screen">
+    <remap from="/color_correction_image/input" to="/vig/$(arg camera)/left/image_rect_color"/>
+    <remap from="/color_correction_image/output" to="/vig/$(arg camera)/left/image_rect_color_corrected"/>
+  </node>
+
+</launch>

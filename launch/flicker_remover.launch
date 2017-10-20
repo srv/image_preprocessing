@@ -1,0 +1,28 @@
+<launch>
+
+  <arg name="bagfile" default="
+    /home/plnegre/bagfiles/2016_09_13_valldemossa_kinetic/20160913_133301_0.bag
+    /home/plnegre/bagfiles/2016_09_13_valldemossa_kinetic/20160913_133301_1.bag
+    /home/plnegre/bagfiles/2016_09_13_valldemossa_kinetic/20160913_133301_2.bag
+    /home/plnegre/bagfiles/2016_09_13_valldemossa_kinetic/20160913_133301_3.bag
+    /home/plnegre/bagfiles/2016_09_13_valldemossa_kinetic/20160913_133301_4.bag
+    /home/plnegre/bagfiles/2016_09_13_valldemossa_kinetic/20160913_133301_5.bag
+    /home/plnegre/bagfiles/2016_09_13_valldemossa_kinetic/20160913_133301_6.bag
+    /home/plnegre/bagfiles/2016_09_13_valldemossa_kinetic/20160913_133301_7.bag
+    /home/plnegre/bagfiles/2016_09_13_valldemossa_kinetic/20160913_133301_8.bag" />
+
+
+  <param name="/use_sim_time" value="true"/>
+  <arg name="camera" default="/stereo_down"/>
+
+  <node pkg="rosbag" type="play" name="rosbag" args="--clock $(arg bagfile) -r 0.1" />
+
+  <include file="$(find turbot)/launch/modules/stereo_pipeline.launch">
+    <arg name="stereo" value="$(arg camera)" />
+  </include>
+
+  <node pkg="image_preprocessing" type="flicker_remover_node" name="flicker_remover" output="screen">
+    <param name="camera_topic" value="$(arg camera)"/>
+  </node>
+
+</launch>
