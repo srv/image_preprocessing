@@ -80,7 +80,6 @@ StereoClahs::StereoClahs(ros::NodeHandle nh, ros::NodeHandle nhp)
     ros::names::clean(stereo_ns + "/clahs/left/image_rect"),  1);
   right_mono_pub_  = it.advertiseCamera(
     ros::names::clean(stereo_ns + "/clahs/right/image_rect"), 1);
-
   left_color_pub_   = it.advertiseCamera(
     ros::names::clean(stereo_ns + "/clahs/left/image_rect_color"),  1);
   right_color_pub_  = it.advertiseCamera(

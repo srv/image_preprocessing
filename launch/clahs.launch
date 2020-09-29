@@ -1,13 +1,11 @@
 <launch>
 
-
-  <arg name="bagfile" default="/home/plnegre/workspace/ros/data/bagfiles/2016_Sant_Feliu/16/2016-06-16-13-57-13_3.bag" />
-
+  <arg name="bagfile" default="/home/plnegre/workspace/ros/data/bagfiles/2015_Valldemossa/06/2015-06-08-20-31-46_2.bag" />
 
   <param name="/use_sim_time" value="true"/>
   <arg name="camera" default="/stereo_down"/>
 
-  <node pkg="rosbag" type="play" name="rosbag" args="--clock $(arg bagfile)" />
+  <node pkg="rosbag" type="play" name="rosbag" args="--clock $(arg bagfile) -r 0.2" />
 
   <include file="$(find turbot)/launch/modules/stereo_pipeline.launch">
     <arg name="stereo" value="$(arg camera)" />
@@ -17,8 +15,8 @@
     <remap from="stereo" to="$(arg camera)/scaled_x2"/>
   </node>
 
-  <node pkg="image_preprocessing" type="clahs" name="clahs" output="screen">
-    <remap from="image" to="$(arg camera)/scaled_x2/left/image_rect_color"/>
+  <node pkg="image_preprocessing" type="stereo_dehazer_node" name="dehazer_node" respawn="true" output="screen" >
+    <remap from="stereo" to="$(arg camera)/scaled_x2"/>
   </node>
 
 </launch>

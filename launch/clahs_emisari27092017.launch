@@ -1,0 +1,26 @@
+<launch>
+
+  <arg name="bagfile" default="/home/xesc/BAGFILES_BAG/emisari_27092017/images170927_1234_2017-09-27-10-54-01_36.bag
+    /home/xesc/BAGFILES_BAG/emisari_27092017/images170927_1234_2017-09-27-10-54-33_37.bag
+    /home/xesc/BAGFILES_BAG/emisari_27092017/images170927_1234_2017-09-27-10-55-05_38.bag
+    /home/xesc/BAGFILES_BAG/emisari_27092017/images170927_1234_2017-09-27-10-55-37_39.bag
+    /home/xesc/BAGFILES_BAG/emisari_27092017/images170927_1234_2017-09-27-10-56-09_40.bag" />
+
+  <param name="/use_sim_time" value="true"/>
+  <arg name="camera" default="/stereo_down"/>
+
+  <node pkg="rosbag" type="play" name="rosbag" args="--clock $(arg bagfile) -r 0.2" />
+
+  <include file="$(find turbot)/launch/modules/stereo_pipeline.launch">
+    <arg name="stereo" value="$(arg camera)" />
+  </include>
+
+  <node pkg="image_preprocessing" type="stereo_clahs_node" name="clahs_node" respawn="true" output="screen" >
+    <remap from="stereo" to="$(arg camera)/scaled_x2"/>
+  </node>
+
+  <node pkg="image_preprocessing" type="stereo_dehazer_node" name="dehazer_node" respawn="true" output="screen" >
+    <remap from="stereo" to="$(arg camera)/scaled_x2"/>
+  </node>
+
+</launch>

@@ -19,9 +19,9 @@ using namespace cv;
 image_transport::Subscriber img_sub_;
 image_transport::Publisher img_pub_;
 
-void cv_clahe(cv::Mat _src, cv::Mat& _dst) {
+void cv_clahe(cv::Mat _src, cv::Mat& _dst, int gain) {
   cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE();
-  clahe->setClipLimit(2);
+  clahe->setClipLimit(gain);
   clahe->apply(_src, _dst);
   return;
 }
@@ -46,9 +46,9 @@ void imageCallback(const sensor_msgs::ImageConstPtr &image_msg) {
 
   // Equalizes the histogram of a one channel image (8UC1) using Contrast
   // Limited Adaptive Histogram Equalization.
-  std::thread thread_b(cv_clahe, BGR[0], std::ref(BGR[0]));
-  std::thread thread_g(cv_clahe, BGR[1], std::ref(BGR[1]));
-  std::thread thread_r(cv_clahe, BGR[2], std::ref(BGR[2]));
+  std::thread thread_b(cv_clahe, BGR[0], std::ref(BGR[0]),2);
+  std::thread thread_g(cv_clahe, BGR[1], std::ref(BGR[1]),2);
+  std::thread thread_r(cv_clahe, BGR[2], std::ref(BGR[2]),2);
   thread_b.join();
   thread_g.join();
   thread_r.join();

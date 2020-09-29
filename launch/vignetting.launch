@@ -1,0 +1,28 @@
+<launch>
+  <arg name="bagfiles" default="/home/xesc/BAGFILES_BAG/emisari_27092017/images170927_1234_2017-09-27-10-54-01_36.bag
+    /home/xesc/BAGFILES_BAG/emisari_27092017/images170927_1234_2017-09-27-10-54-33_37.bag
+    /home/xesc/BAGFILES_BAG/emisari_27092017/images170927_1234_2017-09-27-10-55-05_38.bag
+    /home/xesc/BAGFILES_BAG/emisari_27092017/images170927_1234_2017-09-27-10-55-37_39.bag
+    /home/xesc/BAGFILES_BAG/emisari_27092017/images170927_1234_2017-09-27-10-56-09_40.bag
+    /home/xesc/BAGFILES_BAG/emisari_27092017/images170927_1234_2017-09-27-10-56-41_41.bag
+    /home/xesc/BAGFILES_BAG/emisari_27092017/images170927_1234_2017-09-27-10-57-13_42.bag
+    /home/xesc/BAGFILES_BAG/emisari_27092017/images170927_1234_2017-09-27-10-57-45_43.bag
+    /home/xesc/BAGFILES_BAG/emisari_27092017/images170927_1234_2017-09-27-10-58-17_44.bag
+    /home/xesc/BAGFILES_BAG/emisari_27092017/images170927_1234_2017-09-27-10-58-49_45.bag"/>
+
+  <arg name="camera" default="stereo_forward/right"/>
+  <arg name="image" default="image_raw"/>
+
+
+  <param name="use_sim_time" value="true"/>
+
+  <node pkg="rosbag" type="play" name="player" args="--clock -d 5 $(arg bagfiles)" output="screen" />
+
+  <group ns="$(arg camera)">
+    <node pkg="image_proc" type="image_proc" name="image_proc" output="screen"/>
+  </group>
+
+  <node pkg="image_preprocessing" type="vignetting_extractor" name="vignetting_extractor" output="screen">
+    <remap from="image" to="$(arg camera)/$(arg image)"/>
+  </node>
+</launch>
