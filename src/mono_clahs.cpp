@@ -21,7 +21,7 @@ MonoClahs::MonoClahs(ros::NodeHandle nh, ros::NodeHandle nhp): nh_(nh), nhp_(nhp
   nhp_.param("is_rgb", is_rgb_, true);
 
   img_pub_ = it_.advertiseCamera(
-    ros::names::clean(output_namespace + "/image_rect_color"),  1);
+    ros::names::clean(output_namespace + "/image_rect_color_clahs"),  1);
 }
 
 void MonoClahs::imageCallback(

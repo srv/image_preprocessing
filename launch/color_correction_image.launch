@@ -1,9 +1,19 @@
 <launch>
-  <arg name="camera" default="stereo_forward"/>
+<arg name="bagfile" default="/home/xesc/BAGFILES_BAG/cabrera_16092020/16092020_163754/images_2020-09-16-16-55-03_1.bag" />
+
+
+  <param name="/use_sim_time" value="true"/>
+  <arg name="camera" default="/stereo_down"/>
+
+  <node pkg="rosbag" type="play" name="rosbag" args="--clock $(arg bagfile)" />
+
+  <include file="$(find cola2_turbot)/launch/payload/stereo/stereo_pipeline.launch">
+    <arg name="stereo" value="$(arg camera)" />
+  </include>
 
   <node pkg="image_preprocessing" type="color_correction_image" name="color_correction_image" output="screen">
-    <remap from="/color_correction_image/input" to="/vig/$(arg camera)/left/image_rect_color"/>
-    <remap from="/color_correction_image/output" to="/vig/$(arg camera)/left/image_rect_color_corrected"/>
+    <remap from="/color_correction_image/input" to="$(arg camera)/left/image_rect_color"/>
+    <remap from="/color_correction_image/output" to="$(arg camera)/left/image_rect_color_corrected"/>
   </node>
 
 </launch>

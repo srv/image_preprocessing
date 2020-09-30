@@ -1,7 +1,7 @@
 <launch>
 
 
-  <arg name="bagfile" default="/home/plnegre/workspace/ros/data/bagfiles/2016_Sant_Feliu/16/2016-06-16-13-57-13_3.bag" />
+  <arg name="bagfile" default="/home/xesc/BAGFILES_BAG/cabrera_16092020/16092020_163754/images_2020-09-16-17-12-10_2.bag" />
 
 
   <param name="/use_sim_time" value="true"/>
@@ -9,11 +9,11 @@
 
   <node pkg="rosbag" type="play" name="rosbag" args="--clock $(arg bagfile)" />
 
-  <include file="$(find turbot)/launch/modules/stereo_pipeline.launch">
+  <include file="$(find cola2_turbot)/launch/payload/stereo/stereo_pipeline.launch">
     <arg name="stereo" value="$(arg camera)" />
   </include>
 
-  <node pkg="image_preprocessing" type="clahs" name="clahs" output="screen">
+  <node pkg="image_preprocessing" type="clahs_node" name="clahs_node" output="screen">
     <remap from="image" to="$(arg camera)/scaled_x2/left/image_rect_color"/>
   </node>
 
