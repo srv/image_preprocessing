@@ -1,0 +1,85 @@
+<launch>
+
+
+<arg name="bagfile" default="/home/xesc/BAGFILES_BAG/cabrera_16092020/16092020_163754/images_2020-09-16-16-37-55_0.bag
+      /home/xesc/BAGFILES_BAG/cabrera_16092020/16092020_163754/topics_2020-09-16-16-37-56_0.bag"/> 
+
+
+  <param name="/use_sim_time" value="true"/>
+  <arg name="camera1" default="/stereo_down"/>
+
+  <node pkg="rosbag" type="play" name="rosbag" args="--clock -r 0.8 $(arg bagfile)" />
+  <arg name="disparity_params" value="$(find cola2_turbot)/config/avt_manta/disparity_params_x1.yaml" />
+
+
+  <!-- image proc: debayer and rectification  --> 
+
+  <node pkg="stereo_image_proc" type="stereo_image_proc" name="image_proc_left" respawn="true" output="screen">
+    <remap from="left/image_raw" to="$(arg camera1)/left/image_raw"/>
+    <remap from="left/camera_info" to="$(arg camera1)/left/camera_info"/>
+    <remap from="left/image_rect_color" to="$(arg camera1)/left/image_rect_color"/>
+    <remap from="right/image_raw" to="$(arg camera1)/right/image_raw"/>
+    <remap from="right/camera_info" to="$(arg camera1)/right/camera_info"/>
+    <remap from="right/image_rect_color" to="$(arg camera1)/right/image_rect_color"/>
+    <remap from="disparity" to="$(arg camera1)/disparity"/>
+    <remap from="points2" to="$(arg camera1)/points2"/>
+    <rosparam file="$(arg disparity_params)"/>
+    <param name="approximate_sync" value="true" />
+  </node>
+
+
+  <!-- <node pkg="stereo_image_proc" type="stereo_image_proc" name="image_proc_right" respawn="true" output="screen">
+    <remap from="right/image_raw" to="$(arg camera1)/right/image_raw"/>
+    <remap from="right/camera_info" to="$(arg camera1)/right/camera_info"/>
+    <remap from="right/image_rect_color" to="$(arg camera1)/right/image_rect_color"/>
+    <remap from="disparity" to="$(arg camera1)/disparity"/>
+  </node> -->
+
+  <!-- image_preprocessing: color and contrast enhancement   --> 
+
+  <node pkg="image_preprocessing" type="color_correction_image" name="color_correction_image_left" output="screen">
+    <remap from="/color_correction_image/input" to="$(arg camera1)/left/image_rect_color"/>
+    <remap from="/color_correction_image/output" to="/clahe/left/image_rect_color_corrected"/>
+  </node>
+
+  <node pkg="image_preprocessing" type="color_correction_image" name="color_correction_image_right" output="screen">
+    <remap from="/color_correction_image/input" to="$(arg camera1)/right/image_rect_color"/>
+    <remap from="/color_correction_image/output" to="/clahe/right/image_rect_color_corrected"/>
+  </node>
+
+  <!-- stereo_image proc: build 3D point clouds from the stereo images after color and contrast enhancement  --> 
+  
+  <node pkg="stereo_image_proc" type="stereo_image_proc" name="image_proc_clahe" respawn="true" output="screen">
+    <remap from="left/image_raw" to="/clahe/left/image_rect_color_corrected"/>
+    <remap from="left/camera_info" to="$(arg camera1)/left/camera_info"/>
+    <remap from="left/image_rect_color" to="/clahe/left/image_rect_color"/>
+    <remap from="right/image_raw" to="/clahe/right/image_rect_color_corrected"/>
+    <remap from="right/camera_info" to="$(arg camera1)/right/camera_info"/>
+    <remap from="right/image_rect_color" to="clahe/right/image_rect_color"/>
+    <remap from="disparity" to="/clahe/disparity"/>
+    <remap from="points2" to="/clahe/points2"/>
+    <rosparam file="$(arg disparity_params)"/>
+    <param name="approximate_sync" value="true" />
+  </node>
+  <!--node pkg="tf" type="static_transform_publisher" name="turbot_to_stereo_stick" args="0.4 0.0 0.8 0.0 0.0 0.0 /turbot /stereo_stick 100" />
+  <node pkg="tf" type="static_transform_publisher" name="stereo_stick_to_stereo_base" args="0.0 0.0 0.0 1.57 0.0 1.57 /stereo_stick /stereo_down/base 100" />
+  <node pkg="tf" type="static_transform_publisher" name="stereo_base_to_stereo" args="0.0 0.0 0.0 0.0 0.0 -1.57 /stereo_down/base /stereo_down 100" />
+  <node pkg="tf" type="static_transform_publisher" name="stereo_to_left" args="-0.06 0.0 0.0 0.0 0.0 0.0 /stereo_down /stereo_down/left_optical 100" /-->
+
+
+  
+   <!-- PointCloud2 -->
+  <!-- <node pkg="nodelet" type="nodelet" name="point_cloud2" args="load stereo_image_proc/point_cloud2 $(arg manager)" respawn="$(arg respawn)" >
+    <remap from="left/image_rect_color" to="/clahe/left/image_rect_color_corrected"/>
+    <remap from="left/camera_info" to="$(arg camera1)/left/camera_info"/>
+    <remap from="right/camera_info" to="$(arg camera1)/right/camera_info"/>
+    <remap from="disparity" to="$(arg camera1)/disparity"/>
+    <param name="approximate_sync" value="true" />
+  </node> -->
+
+
+
+
+<!-- <node name="rviz" pkg="rviz" type="rviz"/>  -->
+
+</launch>

@@ -1,0 +1,20 @@
+<launch>
+  
+  <arg name="suffix"          default=""/>
+  
+  <param name="use_sim_time" value="true"/>
+  <arg name="bagfile" default="/home/xesc/BAGFILES_BAG/cabrera_16092020/16092020_163754/images_2020-09-16-16-55-03_1.bag"/> 
+
+  <arg name="calibrate" default="false"/>
+  
+
+  <include file="$(find cola2_turbot)/launch/payload/stereo/stereo_pipeline.launch">
+    <arg name="stereo" value="/stereo_down" />
+    <arg name="launch_in_nuc" value="false" />
+  </include>
+
+  <node name="player" pkg="rosbag" type="play" args="--clock -r 0.8 $(arg bagfile)"/>
+
+
+  <!-- <node name="rviz" pkg="rviz" type="rviz"/> --> 
+</launch>

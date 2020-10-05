@@ -3,17 +3,33 @@
 
 
   <param name="/use_sim_time" value="true"/>
-  <arg name="camera" default="/stereo_down"/>
+  <arg name="camera1" default="/stereo_down"/>
 
-  <node pkg="rosbag" type="play" name="rosbag" args="--clock $(arg bagfile)" />
+  <node pkg="rosbag" type="play" name="rosbag" args="--clock -r 0.8 $(arg bagfile)" />
 
   <include file="$(find cola2_turbot)/launch/payload/stereo/stereo_pipeline.launch">
-    <arg name="stereo" value="$(arg camera)" />
+    <arg name="stereo" value="$(arg camera1)" />
   </include>
 
   <node pkg="image_preprocessing" type="color_correction_image" name="color_correction_image" output="screen">
-    <remap from="/color_correction_image/input" to="$(arg camera)/left/image_rect_color"/>
-    <remap from="/color_correction_image/output" to="$(arg camera)/left/image_rect_color_corrected"/>
+    <remap from="/color_correction_image/input" to="$(arg camera1)/left/image_rect_color"/>
+    <remap from="/color_correction_image/output" to="/clahe/left/image_rect_color_corrected"/>
+  </node> 
+
+<!-- stereo_image proc: build 3D point clouds from the stereo images after color and contrast enhancement  --> 
+  
+  <node pkg="stereo_image_proc" type="stereo_image_proc" name="image_proc_clahe" respawn="true" output="screen">
+    <remap from="left/image_raw" to="/clahe/left/image_rect_color_corrected"/>
+    <remap from="left/camera_info" to="$(arg camera1)/left/camera_info"/>
+    <remap from="left/image_rect_color" to="/clahe/left/image_rect_color"/>
+    <remap from="right/image_raw" to="/clahe/right/image_rect_color_corrected"/>
+    <remap from="right/camera_info" to="$(arg camera1)/right/camera_info"/>
+    <remap from="right/image_rect_color" to="clahe/right/image_rect_color"/>
+    <remap from="disparity" to="/clahe/disparity"/>
+    <remap from="points2" to="/clahe/points2"/>
+    <param name="approximate_sync" value="true" />
   </node>
 
+
+ 
 </launch>
