@@ -61,7 +61,7 @@ void Clahs::clahsGrayscale(const Mat& Image, Mat& Out, const int& NrY, const int
   // Check if image is grayscale
   if (I.channels() != 1) {
     ROS_WARN("[ImagePreprocessing]: Input image has more than one channel. It will be converted to grayscale. Use clahsRGB if image is RGB.");
-    cvtColor(I, I, CV_BGR2GRAY);
+    cvtColor(I, I, cv::COLOR_BGR2GRAY); 
   }
 
   // Check if image is uint8

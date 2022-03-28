@@ -55,8 +55,8 @@ void vignettingRemover(ros::NodeHandle nh, ros::NodeHandle nhp)  {
   nhp.param("std_filename",  std_filename,  string(""));
   ROS_INFO_STREAM("Reading mean image: " << mean_filename.c_str() <<
                   " and std image: " << std_filename.c_str());
-  Mat mean_uchar = imread(mean_filename, CV_LOAD_IMAGE_GRAYSCALE);
-  Mat std_uchar  = imread(std_filename,  CV_LOAD_IMAGE_GRAYSCALE);
+  Mat mean_uchar = imread(mean_filename, cv::IMREAD_GRAYSCALE); 
+  Mat std_uchar  = imread(std_filename,  cv::IMREAD_GRAYSCALE); 
 
   // Convert them to double
   Mat mean_d(mean_uchar.size(), CV_64FC1);

@@ -10,7 +10,10 @@ if(COMPILER_SUPPORTS_CXX11)
 elseif(COMPILER_SUPPORTS_CXX0X)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 else()
-  message(STATUS "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
+  #message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
+  set(CMAKE_CXX_STANDARD 14)
+  add_definitions(-DCOMPILEDWITHC14)
+  message(STATUS "Using CMAKE_CXX_STANDARD")
 endif()
 
 ## Find catkin macros and libraries
@@ -22,7 +25,7 @@ find_package(catkin REQUIRED COMPONENTS
   stereo_msgs
   image_geometry
   stereo_image_proc
-  pcl_ros
+  #pcl_ros
 )
 
 find_package(OpenCV REQUIRED)
@@ -69,14 +72,14 @@ target_link_libraries(color_correction_node
   ${catkin_LIBRARIES}
 )
 
-add_executable(stereo_dehazer_node
-  src/nodes/stereo_dehazer_node.cpp
-  src/stereo_dehazer.cpp
-  src/dehazer.cpp)
-target_link_libraries(stereo_dehazer_node
-  ${catkin_LIBRARIES}
-  ${Boost_Thread_LIBRARIES}
-)
+#add_executable(stereo_dehazer_node
+#  src/nodes/stereo_dehazer_node.cpp
+#  src/stereo_dehazer.cpp
+#  src/dehazer.cpp)
+#target_link_libraries(stereo_dehazer_node
+#  ${catkin_LIBRARIES}
+#  ${Boost_Thread_LIBRARIES}
+#)
 
 add_executable(vignetting_extractor
   src/nodes/vignetting_extractor_node.cpp)
@@ -98,14 +101,14 @@ target_link_libraries(clahs_node
   ${catkin_LIBRARIES}
 )
 
-add_executable(stereo_clahs_node
-  src/nodes/stereo_clahs_node.cpp
-  src/stereo_clahs.cpp
-  src/clahs.cpp)
-target_link_libraries(stereo_clahs_node
-  ${catkin_LIBRARIES}
-  ${Boost_Thread_LIBRARIES}
-)
+#add_executable(stereo_clahs_node
+#  src/nodes/stereo_clahs_node.cpp
+#  src/stereo_clahs.cpp
+#  src/clahs.cpp)
+#target_link_libraries(stereo_clahs_node
+#  ${catkin_LIBRARIES}
+#  ${Boost_Thread_LIBRARIES}
+#)
 
 add_executable(color_correction_image
   src/nodes/color_correction_image_node.cpp)
