@@ -1,0 +1,70 @@
+<launch>
+
+
+<arg name="bagfile" default="/home/xesc/BAGFILES_BAG/18_09_10_23_37_cabrera/images_2020-09-18-10-23-38_0.bag
+			     /home/xesc/BAGFILES_BAG/18_09_10_23_37_cabrera/images_2020-09-18-10-48-56_1.bag
+      			     /home/xesc/BAGFILES_BAG/18_09_10_23_37_cabrera/topics_2020-09-18-10-23-39_0.bag"/> 
+
+
+  <param name="/use_sim_time" value="true"/>
+  <arg name="camera1" default="/stereo_down"/>
+  <arg name="camera2" default="/clahe/left"/>
+  <arg name="image" default="image_rect_color_corrected" />
+  <arg name="image2" default="image_rect_color" />
+  <arg name="format" default="%06i.png" />
+  <arg name="rate" default="100.0" />
+  <arg name="sec_per_frame" default="0.0" />
+  <node pkg="rosbag" type="play" name="rosbag" args="--clock -r 0.8 $(arg bagfile)" />
+  <arg name="disparity_params" value="$(find cola2_turbot)/config/avt_manta/disparity_params_x1.yaml" />
+
+
+  <!-- image proc: debayer and rectification  --> 
+
+  <node pkg="stereo_image_proc" type="stereo_image_proc" name="image_proc_left" respawn="true" output="screen">
+    <remap from="left/image_raw" to="$(arg camera1)/left/image_raw"/>
+    <remap from="left/camera_info" to="$(arg camera1)/left/camera_info"/>
+    <remap from="left/image_rect_color" to="$(arg camera1)/left/image_rect_color"/>
+    <remap from="right/image_raw" to="$(arg camera1)/right/image_raw"/>
+    <remap from="right/camera_info" to="$(arg camera1)/right/camera_info"/>
+    <remap from="right/image_rect_color" to="$(arg camera1)/right/image_rect_color"/>
+    <remap from="disparity" to="$(arg camera1)/disparity"/>
+    <remap from="points2" to="$(arg camera1)/points2"/>
+    <rosparam file="$(arg disparity_params)"/>
+    <param name="approximate_sync" value="true" />
+  </node>
+
+
+
+  <!-- image_preprocessing: color and contrast enhancement, uncomment the block you want to run: color correction/enhancement by dehazing or apply a clahe algorithm --> 
+
+  <!--node pkg="image_preprocessing" type="color_correction_image" name="color_correction_image_left" output="screen">
+    <remap from="/color_correction_image/input" to="$(arg camera1)/left/image_rect_color"/>
+    <remap from="/color_correction_image/output" to="/clahe/left/image_rect_color_corrected"/>
+  </node -->
+
+  <node pkg="image_preprocessing" type="clahs_node" name="clahs_node" output="screen">
+    <remap from="image" to="$(arg camera1)/left/image_rect_color"/>
+  </node> 
+
+
+  <!-- grab images to disk -->
+  <node pkg="image_view" type="extract_images" name="extractor" output="screen" >
+    <remap from="image" to="/clahs/image_rect_color_clahs" />
+    <param name="filename_format" value="$(arg format)" />
+    <param name="sec_per_frame" value="$(arg sec_per_frame)" />
+    <!-- only grab image if sec_per_frame passed between two images -->
+    <!--param name="sec_per_frame" value="0.0" /-->
+  </node>
+
+  
+  
+
+
+  
+   
+
+
+
+<!-- <node name="rviz" pkg="rviz" type="rviz"/>  -->
+
+</launch>
