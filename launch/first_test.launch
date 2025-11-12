@@ -1,0 +1,52 @@
+<launch>
+    <arg name = "robot_name"        default = "sparus2"/>
+
+    <arg name="bagfile" default="/home/uib/bagfiles/sparus2_stereo_camera_2025-10-27-14-27-34_3.bag" />
+    <param name="/use_sim_time" value="true"/>
+
+    <!-- Camera parameters -->
+    <arg name="camera" default="flir_spinnaker_stereo_camera"/>
+    <arg name = "resolution"         default = "full"/>
+    <arg name = "slave_camera_name"  default = "starboard"/>
+    <arg name = "master_camera_name" default = "port"/>
+
+    <!-- Image parameters -->
+    <arg name = "enable_decimate_x1" default = "false"/>
+    <arg name = "enable_decimate_x2" default = "true"/>
+    <arg name = "enable_decimate_x4" default = "false"/>
+    <arg name = "enable_decimate_x8" default = "false"/>
+
+
+    <node pkg="rosbag" type="play" name="rosbag" args="--clock $(arg bagfile) -r 0.2" />
+
+    <group ns = "$(arg robot_name)">
+
+        <include file="$(find image_preprocessing)/launch/stereo_processing/stereo_pipeline.launch">
+            <arg name="stereo" value="$(arg camera)" />
+            <arg name = "resolution"         value = "$(arg resolution)"/>
+            <arg name = "slave_camera_name"  value = "$(arg slave_camera_name)"/>
+            <arg name = "master_camera_name" value = "$(arg master_camera_name)"/>
+            <arg name = "enable_decimate_x1" value = "$(arg enable_decimate_x1)"/>
+            <arg name = "enable_decimate_x2" value = "$(arg enable_decimate_x2)"/>
+            <arg name = "enable_decimate_x4" value = "$(arg enable_decimate_x4)"/>
+            <arg name = "enable_decimate_x8" value = "$(arg enable_decimate_x8)"/>
+        </include>
+
+        <node pkg="image_preprocessing" type="stereo_clahs_node" name="clahs_node" respawn="true" output="screen" >
+            <remap from="stereo" to="$(arg camera)/scaled_x2"/>
+            <remap from="slave_camera" to="/$(arg slave_camera_name)"/>
+            <remap from="master_camera" to="/$(arg master_camera_name)"/>
+        </node>
+
+        <node pkg="image_preprocessing" type="clahe_node" name="clahe_node" respawn="true" output="screen" >
+            <remap from="/color_correction_image/input" to="$(arg camera)/scaled_x2/$(arg master_camera_name)/image_rect_color"/>
+            <remap from="/color_correction_image/output" to="$(arg camera)/scaled_x2/$(arg master_camera_name)/clahe/image_rect_color_clahe"/>
+        </node>
+
+        <!-- <node pkg="image_preprocessing" type="stereo_dehazer_node" name="dehazer_node" respawn="true" output="screen" >
+            <remap from="stereo" to="$(arg camera)/scaled_x2"/>
+        </node> -->
+
+    </group>
+
+</launch>

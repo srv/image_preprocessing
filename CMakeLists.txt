@@ -135,9 +135,9 @@ target_link_libraries(stereo_clahs_node
  ${Boost_Thread_LIBRARIES}
 )
 
-add_executable(color_correction_image
-  src/nodes/color_correction_image_node.cpp)
-target_link_libraries(color_correction_image
+add_executable(clahe_node
+  src/nodes/clahe_node.cpp)
+target_link_libraries(clahe_node
   ${catkin_LIBRARIES}
 )
 
