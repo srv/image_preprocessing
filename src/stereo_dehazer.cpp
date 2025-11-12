@@ -15,21 +15,23 @@ StereoDehazer::StereoDehazer(ros::NodeHandle nh, ros::NodeHandle nhp)
     : nh_(nh), nhp_(nhp) {
   // Topic parameters
   string stereo_ns = nh_.resolveName("stereo");
+  string slave_ns = nh_.resolveName("slave_camera");
+  string master_ns = nh_.resolveName("master_camera");
 
   nhp_.param("left_mono_topic", left_mono_topic_,
-    string("/left/image_rect"));
+    string("/" + slave_ns + "/image_rect"));
   nhp_.param("right_mono_topic", right_mono_topic_,
-    string("/right/image_rect"));
+    string("/" + master_ns + "/image_rect"));
 
   nhp_.param("left_color_topic", left_color_topic_,
-    string("/left/image_rect_color"));
+    string("/" + slave_ns + "/image_rect_color"));
   nhp_.param("right_color_topic", right_color_topic_,
-    string("/right/image_rect_color"));
+    string("/" + master_ns + "/image_rect_color"));
 
   nhp_.param("left_info_topic", left_info_topic_,
-    string("/left/camera_info"));
+    string("/" + slave_ns + "/camera_info"));
   nhp_.param("right_info_topic", right_info_topic_,
-    string("/right/camera_info"));
+    string("/" + master_ns + "/camera_info"));
 
   nhp_.param("cloud_topic", cloud_topic_,
     string("/points2"));
@@ -77,20 +79,19 @@ StereoDehazer::StereoDehazer(ros::NodeHandle nh, ros::NodeHandle nhp)
 
   // Set the image publishers before the streaming
   left_mono_pub_   = it.advertiseCamera(
-    ros::names::clean(stereo_ns + "/enhanced/left/image_rect"),  1);
+    ros::names::clean(stereo_ns + "/dehaze/" + slave_ns + "/image_rect"),  1);
   right_mono_pub_  = it.advertiseCamera(
-    ros::names::clean(stereo_ns + "/enhanced/right/image_rect"), 1);
-
+    ros::names::clean(stereo_ns + "/dehaze/" + master_ns + "/image_rect"), 1);
   left_color_pub_   = it.advertiseCamera(
-    ros::names::clean(stereo_ns + "/enhanced/left/image_rect_color"),  1);
+    ros::names::clean(stereo_ns + "/dehaze/" + slave_ns + "/image_rect_color"),  1);
   right_color_pub_  = it.advertiseCamera(
-    ros::names::clean(stereo_ns + "/enhanced/right/image_rect_color"), 1);
+    ros::names::clean(stereo_ns + "/dehaze/" + master_ns + "/image_rect_color"), 1);
 
   // Create the callback with the clouds
   pub_points2_ = nh.advertise< pcl::PointCloud<pcl::PointXYZRGB> >(
-    ros::names::clean(stereo_ns + "/enhanced/points2"), 1);
+    ros::names::clean(stereo_ns + "/dehaze/points2"), 1);
 
-  ROS_INFO("Stereo Image Enhacer Initialized!");
+  ROS_INFO("Stereo Image Dehazer Initialized!");
 }
 
 /** \brief Stereo callback. This function is called when synchronized
