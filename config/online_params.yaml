@@ -1,0 +1,15 @@
+slamon:
+  enable_bucketing: false
+  enable_debugging: true
+  enable_enhacement: true
+  feature_detector_name: sift
+  lc_candidates: 3
+  lc_discard_window: 20
+  lc_neighbors: 3
+  matching_type: ratio_matching
+  max_kpts_bucket: 3
+  max_kpts_retained: 1500
+  min_inliers: 40
+  min_lc_inliers: 100
+  motion_estimation_type: ap3p
+  robot_frame_id: /turbot/base_link
