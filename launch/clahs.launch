@@ -7,7 +7,7 @@
 
   <node pkg="rosbag" type="play" name="rosbag" args="--clock $(arg bagfile) -r 0.2" />
 
-  <include file="$(find turbot)/launch/modules/stereo_pipeline.launch">
+  <include file="$(find image_preprocessing)/launch/stereo_processing/stereo_pipeline.launch">
     <arg name="stereo" value="$(arg camera)" />
   </include>
 

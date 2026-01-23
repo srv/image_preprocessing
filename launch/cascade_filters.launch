@@ -1,7 +1,7 @@
 <launch>
     <arg name = "robot_name"        default = "sparus2"/>
 
-    <arg name="bagfile" default="/home/uib/bagfiles/sparus2_stereo_camera_2025-10-27-14-27-34_3.bag" />
+    <arg name="bagfile" default="/home/bomiquel/datasets/bagfiles/el_sec/sparus2_stereo_camera_2025-11-10-11-04-46_3.bag" />
     <param name="/use_sim_time" value="true"/>
 
     <!-- Camera parameters -->
@@ -32,26 +32,16 @@
             <arg name = "enable_decimate_x8" value = "$(arg enable_decimate_x8)"/>
         </include>
 
-        <!-- Clahs -->
-        <node pkg="image_preprocessing" type="stereo_clahs_node" name="clahs_node" respawn="true" output="screen" >
-            <remap from="stereo" to="$(arg camera)/scaled_x2"/>
-            <remap from="slave_camera" to="/$(arg slave_camera_name)"/>
-            <remap from="master_camera" to="/$(arg master_camera_name)"/>
+        <node pkg="image_preprocessing" type="mono_dehazer_node" name="mono_dehazer_node" respawn="true" output="screen">
+            <remap from="image" to="/sparus2/flir_spinnaker_stereo_camera/scaled_x2/port/image_raw"/>
+            <remap from="/dehazed/image_rect_color" to="/sparus2/flir_spinnaker_stereo_camera/scaled_x2/port/dehazed_image_raw"/>
         </node>
 
-        <!-- Clahe -->
-        <node pkg="image_preprocessing" type="mono_clahe_node" name="mono_clahe_node" respawn="true" output="screen" >
-            <remap from="/color_correction_image/input" to="$(arg camera)/scaled_x2/$(arg master_camera_name)/image_rect_color"/>
-            <remap from="/color_correction_image/output" to="$(arg camera)/scaled_x2/$(arg master_camera_name)/clahe/image_rect_color_clahe"/>
-        </node>
-
-        <!-- Dehazer -->
-        <node pkg="image_preprocessing" type="stereo_dehazer_node" name="dehazer_node" respawn="true" output="screen" >
-            <remap from="stereo" to="$(arg camera)/scaled_x2"/>
-            <remap from="slave_camera" to="/$(arg slave_camera_name)"/>
-            <remap from="master_camera" to="/$(arg master_camera_name)"/>
+        <node pkg="image_preprocessing" type="mono_clahe_node" name="mono_clahe_node" respawn="true" output="screen">
+            <remap from="img_in" to="/sparus2/flir_spinnaker_stereo_camera/scaled_x2/port/dehazed_image_raw"/>
+            <remap from="img_out" to="/sparus2/flir_spinnaker_stereo_camera/scaled_x2/port/dehazed_clahe_image_raw"/>
+            <param name="clip_limit" value="3"/>
         </node>
 
     </group>
-
 </launch>

@@ -2,42 +2,32 @@
 <package format="2">
 
   <name>image_preprocessing</name>
-  <version>0.0.0</version>
+  <version>1.0.0</version>
   <description>The image_preprocessing package</description>
-
-  <maintainer email="miquel.massot@uib.cat">Miquel Massot</maintainer>
-
-  <license>BSD</license>
 
   <url type="website">http://wiki.ros.org/image_preprocessing</url>
 
-  <author email="antonimartorelltorres@gmail.com">Antoni Martorell</author>
+  <maintainer email="bo-miquel.nordfeldt@uib.eu">Bo Miquel Nordfeldt-Fiol</maintainer>
+  <author email="miquel.massot@uib.cat">Miquel Massot</author>
 
+  <license>BSD</license>
 
-  <!-- Dependencies can be catkin packages or system dependencies -->
+  <!-- Build tool -->
   <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>image_transport</build_depend>
-  <build_depend>cv_bridge</build_depend>
-  <build_depend>roscpp</build_depend>
-  <build_depend>sensor_msgs</build_depend>
-  <build_depend>opencv2</build_depend>
-  <build_depend>stereo_msgs</build_depend>
-  <build_depend>image_geometry</build_depend>
-  <build_depend>stereo_image_proc</build_depend>
-  <build_depend>pcl_ros</build_depend>
 
-  <exec_depend>opencv2</exec_depend>
-  <exec_depend>image_transport</exec_depend>
-  <exec_depend>cv_bridge</exec_depend>
-  <exec_depend>roscpp</exec_depend>
-  <exec_depend>sensor_msgs</exec_depend>
-  <exec_depend>stereo_msgs</exec_depend>
-  <exec_depend>stereo_image_proc</exec_depend>
-  <exec_depend>image_geometry</exec_depend>
-  <exec_depend>pcl_ros</exec_depend>
-
+  <!-- ROS Dependencies (Build + Exec) -->
+  <depend>roscpp</depend>
+  <depend>pcl_ros</depend>
+  <depend>cv_bridge</depend>
+  <depend>sensor_msgs</depend>
+  <depend>stereo_msgs</depend>
+  <depend>image_geometry</depend>
+  <depend>image_transport</depend>
+  <depend>message_filters</depend>
+  <depend>stereo_image_proc</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
   </export>
+
 </package>
