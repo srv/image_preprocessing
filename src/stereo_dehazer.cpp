@@ -188,38 +188,29 @@ void StereoDehazer::colorCb(const ImageConstPtr& l_img_msg,
     channels[1].convertTo(g,CV_8U);
     channels[2].convertTo(r,CV_8U);
 
-    std::vector<Mat> channels2(3);
-    split(l_img_color, channels2);
-    Mat ro, go, bo;
-    channels2[0].convertTo(bo,CV_8U);
-    channels2[1].convertTo(go,CV_8U);
-    channels2[2].convertTo(ro,CV_8U);
-
     //  Convert the points2 to pcl
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_out(new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     fromROSMsg(*cloud_msg, *cloud);
 
     // For every point into the pointcloud, get the dehazed color from left image
-    int32_t tmp_rgb;
-    for (uint i=0; i<cloud->size(); i++) {
+    int width = r.cols;
+    int height = r.rows;
+    for (size_t i=0; i<cloud->size(); i++) {
       pcl::PointXYZRGB p = cloud->points[i];
       if (isfinite(p.x) && isfinite(p.y) && isfinite(p.z)) {
         cv::Point3d xyz(p.x, p.y, p.z);
         cv::Point2d pixel = left_cam.project3dToPixel(xyz);
 
-        // Get the color of the corresponding pixel
-        uint8_t pr = r.at<uint8_t>(pixel.y, pixel.x);
-        uint8_t pg = g.at<uint8_t>(pixel.y, pixel.x);
-        uint8_t pb = b.at<uint8_t>(pixel.y, pixel.x);
-
-        int32_t tmp_rgb = (pr << 16) | (pg << 8) | pb;
-        p.rgb = *reinterpret_cast<float*>(&tmp_rgb);
-
+        if (pixel.x >= 0 && pixel.x < width && pixel.y >= 0 && pixel.y < height) {
+          p.r = r.at<uint8_t>(pixel.y, pixel.x);
+          p.g = g.at<uint8_t>(pixel.y, pixel.x);
+          p.b = b.at<uint8_t>(pixel.y, pixel.x);
+        }
         cloud_out->push_back(p);
+
       }
     }
-
     // Republish the pointcloud
     cloud_out->header = pcl_conversions::toPCL(cloud_msg->header);
     pub_points2_.publish(cloud_out);

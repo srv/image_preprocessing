@@ -31,7 +31,7 @@ ColorCorrection::ColorCorrection(ros::NodeHandle nh, ros::NodeHandle nhp): nh_(n
 
 cv::Mat ColorCorrection::adjustLevelsAndGamma(const cv::Mat& channel, double gamma, double max_value) {
   cv::Mat output = channel;
-  size_t i, j;
+  int i, j;
   #pragma omp parallel for collapse(2)
   for (i = 0; i < channel.rows; i++) {
     for (j = 0; j < channel.cols; j++) {
@@ -41,6 +41,7 @@ cv::Mat ColorCorrection::adjustLevelsAndGamma(const cv::Mat& channel, double gam
       output.at<unsigned char>(i, j) = ov;
     }
   }
+  return output;
 }
 
 void ColorCorrection::imageCallback(

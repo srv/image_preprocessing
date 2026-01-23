@@ -2,7 +2,7 @@
 <package format="2">
 
   <name>image_preprocessing</name>
-  <version>1.0.0</version>
+  <version>1.0.1</version>
   <description>The image_preprocessing package</description>
 
   <url type="website">http://wiki.ros.org/image_preprocessing</url>

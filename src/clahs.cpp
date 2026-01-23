@@ -378,18 +378,18 @@ Mat Clahs::Interpolate(const Mat& SubRegion,
   Mat XInvCoef;
   int dec1 = XSize;
   Mat row1 = Mat::zeros(1,XSize,CV_64FC1);
-  for (uint i=0; i<XSize; i++) {
+  for (int i=0; i<XSize; i++) {
     row1.at<double>(0,i) = dec1;
     dec1--;
   }
-  for (uint j=0; j<YSize; j++) {
+  for (int j=0; j<YSize; j++) {
     XInvCoef.push_back(row1);
   }
 
   uint dec2 = YSize;
   Mat YInvCoef = Mat::zeros(YSize,XSize,CV_64FC1);
-  for (uint i=0; i<YSize; i++) {
-    for (uint j=0; j<XSize; j++) {
+  for (int i=0; i<YSize; i++) {
+    for (int j=0; j<XSize; j++) {
       YInvCoef.at<double>(i,j) = dec2;
     }
     dec2--;
@@ -398,18 +398,18 @@ Mat Clahs::Interpolate(const Mat& SubRegion,
   Mat XCoef;
   int inc1 = 0;
   Mat row2 = Mat::zeros(1,XSize,CV_64FC1);
-  for (uint i=0; i<XSize; i++) {
+  for (int i=0; i<XSize; i++) {
     row2.at<double>(0,i) = inc1;
     inc1++;
   }
-  for (uint j=0; j<YSize; j++) {
+  for (int j=0; j<YSize; j++) {
     XCoef.push_back(row2);
   }
 
   uint inc2 = 0;
   Mat YCoef = Mat::zeros(YSize,XSize,CV_64FC1);
-  for (uint i=0; i<YSize; i++) {
-    for (uint j=0; j<XSize; j++) {
+  for (int i=0; i<YSize; i++) {
+    for (int j=0; j<XSize; j++) {
       YCoef.at<double>(i,j) = inc2;
     }
     inc2++;
@@ -421,8 +421,8 @@ Mat Clahs::Interpolate(const Mat& SubRegion,
   Mat MapRB_red = buildbyIndices(MapRB, BinValues);
 
   Mat InterpRegion = Mat::zeros(MapLU_red.rows,MapLU_red.cols,CV_64FC1);
-  for (uint i=0; i<MapLU_red.rows; i++) {
-    for (uint j=0; j<MapLU_red.cols; j++) {
+  for (int i=0; i<MapLU_red.rows; i++) {
+    for (int j=0; j<MapLU_red.cols; j++) {
       InterpRegion.at<double>(i,j) = ( YInvCoef.at<double>(i,j) * ( XInvCoef.at<double>(i,j)*MapLU_red.at<double>(i,j) + XCoef.at<double>(i,j)*MapRU_red.at<double>(i,j) ) +
                                        YCoef.at<double>(i,j) *    ( XInvCoef.at<double>(i,j)*MapLB_red.at<double>(i,j) + XCoef.at<double>(i,j)*MapRB_red.at<double>(i,j) ) ) / Num;
     }
@@ -455,7 +455,7 @@ Mat Clahs::linspace(const double& startP,
 
 Mat Clahs::cumsum(const Mat& in) {
   Mat output = Mat::zeros(in.rows,1,in.type());
-  for (uint i=0; i<in.rows; i++) {
+  for (int i=0; i<in.rows; i++) {
     if (i>0) {
       output.at<double>(i,0) = output.at<double>(i-1,0) + in.at<double>(i,0);
     } else {
