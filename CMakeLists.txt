@@ -52,16 +52,20 @@ find_package(PCL REQUIRED)
 ## Create library ##
 ####################
 
-add_library(${PROJECT_NAME}_core
+add_library(${PROJECT_NAME}_core SHARED
   src/clahe.cpp
   src/clahs.cpp
   src/dehazer.cpp
 )
 
+set_target_properties(${PROJECT_NAME}_core PROPERTIES
+  LIBRARY_OUTPUT_DIRECTORY ${CATKIN_DEVEL_PREFIX}/lib
+  ARCHIVE_OUTPUT_DIRECTORY ${CATKIN_DEVEL_PREFIX}/lib
+)
+
 target_link_libraries(${PROJECT_NAME}_core
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
-  ${PCL_LIBRARIES}
 )
 
 
